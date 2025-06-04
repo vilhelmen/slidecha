@@ -20,15 +20,37 @@
       height: 300px;
     }
 
+    .puzzle-container {
+            display: grid;
+            border: 2px solid #333;
+            background-color: #f0f0f0;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+    .puzzle-tile {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 2em;
+            cursor: pointer;
+            box-sizing: border-box; /* Include padding and border in total size */
+            user-select: none; /* Prevent text selection */
+
+            /* CSS Transition for smooth movement */
+            transition: transform 0.3s ease-out;
+            /* For position: absolute method: */
+            /* transition: top 0.3s ease-out, left 0.3s ease-out; */
+        }
+
     /* Your style here... */
   </style>
 </head>
 
 <body>
   <div id="captcha-container">
-    <!-- Add your CAPTCHA here: -->
-    Hello world!
+    <div class = "puzzle-container" id="puzzle-container">
 
+    </div>
     <!-- We've added a sample button. Feel free to remove it: -->
     <button id="solve">
       Solve!
@@ -44,7 +66,10 @@
         window.top.postMessage("success", '*');
       }
 
+      render_puzzle()
+
       // Your CAPTCHA code goes here, we've added a simple example below:
+
       document.getElementById('solve')
            .addEventListener('click', () => captchaSuccess());
 
