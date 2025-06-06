@@ -8,7 +8,6 @@
   <style>
     html,
     body {
-      background: pink;
       margin: 0;
       padding: 0;
       font-family: sans-serif;
@@ -18,43 +17,198 @@
       background: white;
       width: 390px;
       height: 300px;
+
+      display: grid;
+      grid-template-rows: 70% 30%;
     }
 
-    .puzzle-container {
-            display: grid;
-            border: 2px solid #333;
-            background-color: #f0f0f0;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-        }
+    #upper-container {
+      display: grid;
+      /*grid-template-columns: 7fr 0.5fr 5.5fr;*/
+      grid-template-columns: 7fr 6fr;
+      height: 100%;
+      width: 100%;
+      overflow: hidden;
+      background: green;
+    }
+
+    #upper-spacer {
+      width: 100%;
+      height: 100%;
+      background: red;
+    }
+
+    #puzzle-holder {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      width: 100%;
+      height: 100%;
+      background: darkgoldenrod;
+    }
+
+    #puzzle-container {
+      display: grid;
+      background: yellow;
+      gap: 0;
+    }
+
+    #puzzle-addons {
+      display: grid;
+      background: aqua;
+      height: 100%;
+      width: 100%;
+    }
+    #upper-right {
+      display: grid;
+      justify-content: center;
+      align-items: center;
+      width: 100%;
+      min-width: 0%;
+      height: 100%;
+
+      background: blue;
+      overflow: hidden;
+      /*grid-template-rows: 1fr 8fr 1fr;*/
+      grid-template-rows: 8fr 2fr;
+      grid-template-columns: 1fr;
+    }
+
+    #solution-holder {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      width: 100%;
+      height: 100%;
+      background: purple;
+    }
+
+    #solution-container {
+      display: grid;
+      background: hotpink;
+      gap: 0;
+    }
+
+    #solution-top {
+      background: white;
+      width: 100%;
+      height: 100%;
+    }
+    #solution-bottom {
+      background: white;
+      width: 100%;
+      height: 100%;
+    }
+
+    #solution-preview img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
 
     .puzzle-tile {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 2em;
-            cursor: pointer;
-            box-sizing: border-box; /* Include padding and border in total size */
-            user-select: none; /* Prevent text selection */
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      box-sizing: border-box;
+      user-select: none;
+      aspect-ratio: 1;
+      height: 100%;
+      min-height: 0;
 
-            /* CSS Transition for smooth movement */
-            transition: transform 0.3s ease-out;
-            /* For position: absolute method: */
-            /* transition: top 0.3s ease-out, left 0.3s ease-out; */
-        }
+      /* tbh I have no idea what this is going to do */
+      transition: transform 0.3s ease-out;
+    }
 
-    /* Your style here... */
+    .puzzle-tile svg {
+      display: block;
+      width: 80%;
+      height: 80%;
+      /*box-sizing: border-box;
+      border: 1px dashed orange;*/
+      object-fit: contain;
+    }
+
+    /* I have not tested nay of this :) */
+    .puzzle-tile .overlay-control {
+      position: absolute;
+      background: rgba(0, 0, 0, 0.4);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+      z-index: 10;
+    }
+
+    .puzzle-tile .overlay-top {
+      top: 0;
+      left: 10%;
+      width: 80%;
+      height: 25%;
+    }
+
+    .puzzle-tile .overlay-bottom {
+      bottom: 0;
+      left: 10%;
+      width: 80%;
+      height: 25%;
+    }
+
+    .puzzle-tile .overlay-left {
+      top: 10%;
+      left: 0;
+      height: 80%;
+      width: 25%;
+    }
+
+    .puzzle-tile .overlay-right {
+      top: 10%;
+      right: 0;
+      height: 80%;
+      width: 25%;
+    }
+
+    /* Hover state for desktop (remains the same): */
+    .puzzle-tile:hover .overlay-control {
+      opacity: 1;
+    }
+
+    /* always render hover controls on small screens */
+    @media (max-width: 768px) {
+      .puzzle-tile .overlay-control {
+        opacity: 1 !important;
+      }
+    }
+
+    /* some junk to always display until first interact but will need some JS somewhere */
+    .puzzle-container[data-controls-shown="true"] .overlay-control {
+      opacity: 1;
+    }
+
+    .puzzle-container[data-controls-shown="false"] .overlay-control {
+      opacity: 0;
+    }
+
   </style>
 </head>
 
 <body>
   <div id="captcha-container">
-    <div class = "puzzle-container" id="puzzle-container">
-
+    <div id="upper-container">
+      <div id="puzzle-holder"><div id="puzzle-container"></div></div>
+      <!--<div id="upper-spacer"></div>-->
+      <div id="upper-right">
+          <!--<div id="solution-top"><- turn this</div>-->
+          <div id="solution-holder"><div id="solution-container"></div></div>
+          <div id="solution-bottom"><- turn this into this ^</div>
+        </div>
     </div>
-    <!-- We've added a sample button. Feel free to remove it: -->
-    <button id="solve">
-      Solve!
-    </button>
+    <div id="lower-container">
+      <div id="puzzle-addons">things go here, maybe make smaller but that shrinks the soln more</div>
+    </div>
   </div>
 
   <script type="text/javascript" src="main.js"></script>

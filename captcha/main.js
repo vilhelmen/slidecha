@@ -146,13 +146,12 @@ function column_shift(grid, idx, magnitude, up= false) {
 // 3. Dump to play area
 // 4. Start play loop, activate further hell settings
 
-let size = 3;
+let size = 4;
 let steps = 4;
 let shuffle = 0;
 
 plan_puzz(size, steps, shuffle)
 
-const puzzleContainer = document.getElementById('puzzle-container');
 
 // https://coolors.co/palette/2f3e77-f5b841-f4ece3-2cb67d-ff4f5e-4ac6ff-ff6a3d
 const colors = ['#2f3e77','#f5b841','#f4ece3','#2cb67d','#ff4f5e','#4ac6ff','#ff6a3d'];
@@ -203,6 +202,8 @@ NOTE FROM BOOTSTRAP
 </svg>
  */
 
+const puzzleContainer = document.getElementById('puzzle-container');
+const solutionContainer = document.getElementById('solution-container');
 
 function render_puzzle() {
     puzzleContainer.innerHTML = '';
@@ -210,15 +211,31 @@ function render_puzzle() {
     puzzleContainer.style.gridTemplateRows = `repeat(${size}, 1fr)`;
     puzzleContainer.style.gap = '0px';
 
+    solutionContainer.innerHTML = '';
+    solutionContainer.style.gridTemplateColumns = `repeat(${size}, 1fr)`;
+    solutionContainer.style.gridTemplateRows = `repeat(${size}, 1fr)`;
+    solutionContainer.style.gap = '0px';
+
     for (let i = 0; i < size; i++) {
         for (let j = 0; j < size; j++) {
             const tile = document.createElement('div');
             tile.classList.add('puzzle-tile');
             tile.style.background = colors[getRandomInt(colors.length)];
-            tile.innerText = symbols[getRandomInt(symbols.length)];
+            // tile.innerText = symbols[getRandomInt(symbols.length)];
+            // happy pride, idk why the class is bi
+            tile.innerHTML = `<svg class="bi" fill="currentColor"><use xlink:href="svg/bootstrap-icons.svg#sunglasses"/></svg>`
+            //tile.firstChild.setAttribute('transform', 'rotate(45)');
 
             tile.dataset.num = j + (size*i);
             puzzleContainer.appendChild(tile);
+
+            const solutionTile = document.createElement('div');
+            solutionTile.classList.add('puzzle-tile');
+            solutionTile.style.background = tile.style.background;
+            solutionTile.innerHTML = tile.innerHTML;
+            // this is bad actually, but the upper tile nums are wrong. and need to be set by initial state
+            solutionTile.dataset.num = tile.dataset.num;
+            solutionContainer.appendChild(solutionTile);
         }
     }
 
