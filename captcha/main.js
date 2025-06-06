@@ -2,7 +2,7 @@
  * Construct puzzle initial state
  * @param {number} size - puzzle size, NxN
  * @param {number} shifts - Number of row/column shifts (min solution moves is (generally) between [shifts] and [floor(size/2)*shifts] )
- * @param {number} shuffle - shuffle pieces. A single swap can easily make it impossible
+ * @param {number} shuffle - shuffle pieces. A single swap can easily make it "impossible"
  */
 function plan_puzz(size = 3, shifts= 4, shuffle = 0) {
     // Technically the minimum solution length could be lower as we are SUPER NOT tracking higher order move effects.
@@ -146,38 +146,34 @@ function column_shift(grid, idx, magnitude, up= false) {
 // 3. Dump to play area
 // 4. Start play loop, activate further hell settings
 
-let size = 4;
-let steps = 4;
-let shuffle = 0;
-
-plan_puzz(size, steps, shuffle)
-
-
-// https://coolors.co/palette/2f3e77-f5b841-f4ece3-2cb67d-ff4f5e-4ac6ff-ff6a3d
-const colors = ['#2f3e77','#f5b841','#f4ece3','#2cb67d','#ff4f5e','#4ac6ff','#ff6a3d'];
-// another I like https://coolors.co/palette/f94144-f3722c-f8961e-f9844a-f9c74f-90be6d-43aa8b-4d908e-577590-277da1
-// const colors = ['#f94144', '#f3722c', '#f8961e', '#f9844a', '#f9c74f', '#90be6d', '#43aa8b', '#4d908e', '#577590', '#277da1']
+const colors = new Map([
+    // I am good with names!!!
+    // https://coolors.co/palette/2f3e77-f5b841-f4ece3-2cb67d-ff4f5e-4ac6ff-ff6a3d
+    ['default', ['#2f3e77','#f5b841','#f4ece3','#2cb67d','#ff4f5e','#4ac6ff','#ff6a3d']],
+    // another I like https://coolors.co/palette/f94144-f3722c-f8961e-f9844a-f9c74f-90be6d-43aa8b-4d908e-577590-277da1
+    // But I don't care for the 4th and I think the 8 and 9 are too similar to 7 and 10
+    //  but I don't like how unbalanced it is if I remove all three
+    ['another_one', ['#f94144', '#f3722c', '#f8961e', '#f9844a', '#f9c74f', '#90be6d', '#43aa8b', '#4d908e', '#577590', '#277da1']]
+    // TODO: find more I like :)
+])
 
 // whitelist of the symbol set to narrow it down
 //  also you're gonna want them to not by radially symmetric in any way for certain hell modes
 //  ... or maybe you do
-// TODO: finish
-const symbols = ['!','@','#','$','%','^','&'];
-
 
 // require the puzzle to contain these in some form
 //  alt mode to force only from this set
-const demanded_symbols = new Map([
+const symbols = new Map([
     // like and subscribe
     ['subscribe', ['youtube', 'hand-thumbs-up', 'sunglasses', 'twitch']],
     // chicken paul
     ['paul', ['egg', 'fire', 'egg-fried']],
-    // go to the bank and withdraw the funds - conveniently the size of a 3x3
-    //  I like chat-left-text but I feel headset is more appropriate. No old school phone icons.
+    // "go to the bank and withdraw the funds" - conveniently the size of a 3x3
+    //  I like chat-left-text but I feel headset is more appropriate. No office phone icon, tragically.
     ['withdrawfunds', ['headset', 'car-front', 'bank', 'person-vcard', 'credit-card-2-back',
         'cash-coin', 'currency-exchange', 'currency-bitcoin']],
     // MyCoin is a very real, award-winning financial establishment I'll have you know
-    //  VERY tempted to add more copies of award
+    //  VERY tempted to add more copies of award to bias selection
     ['mycoin', ['currency-exchange', 'cash-coin', 'safe', 'briefcase',
         'currency-bitcoin', 'currency-euro', 'currency-dollar', 'currency-yen', 'currency-rupee', 'currency-pound',
         'buildings', 'bank', 'calculator', 'graph-up-arrow', 'award', 'headset']],
@@ -186,7 +182,10 @@ const demanded_symbols = new Map([
         'emoji-wink', 'emoji-kiss', 'emoji-neutral', 'emoji-expressionless', 'emoji-tear', 'emoji-dizzy', 'emoji-frown',
         'emoji-surprise', 'emoji-smile', 'emoji-heart-eyes', 'emoji-laughing', 'emoji-sunglasses', 'emoji-angry']],
     // Dice
-    ['dice', ['dice-2','dice-3','dice-1','dice-4','dice-5','dice-6']]
+    ['dice', ['dice-1', 'dice-2', 'dice-3', 'dice-4', 'dice-5', 'dice-6']],
+    // Default whitelist from the set.
+    // TODO: do
+    ['default', []]
 ]);
 
 /*
@@ -201,6 +200,72 @@ NOTE FROM BOOTSTRAP
   <use xlink:href="bootstrap-icons.svg#shop"/>
 </svg>
  */
+
+let size = 4;
+let steps = 4;
+let shuffle = 0;
+
+plan_puzz()
+
+/**
+ * Plan puzzle content. Image puzzle will disable all other content settings.
+ *
+ * Number of steps is not the number of moves to solution; generation MAY undo its own steps or create something reducible.
+ * Maximum number of moves to solution is floor(size/2)*shifts
+ *
+ * !! BAD TIME POTENTIAL !!
+ * - Shuffling even one piece will ruin the expected solution move total.
+ *      Shuffling a piece can ruin traditional sliding puzzles, but this is modified to move a row/col so maybe not?
+ * - Single color mode without enough symbols will fail.
+ *     The same applies to single symbol mode and colors as well as exclusive symbols with a small symbol set.
+ *     Enabling rotation will likely prevent these from failing
+ * - Disabling the safety will allow for explicitly bad combination (one color, one symbol, no rotation)
+ *       but will also interfere with standard generation, so only disable if you want it to be bad.
+ *     Duplicate tiles will not be interchangeable unless the nonce is off
+ *
+ * Idea: Reverse-colorblind mode, colors are generated notably close to each other. Maybe a similar rotation mode.
+ *
+ * @param {number} size - Puzzle size, always square.
+ * @param {number} steps - Number of times to slide the initial puzzle rows/columns.
+ * @param {number} shuffles - !! Randomly shuffle tiles n times. basically guaranteed to break the puzzle.
+ * @param {null|string} image_override - Use an image instead of symbols. Maybe the user's profile picture? :)
+ * @param {string} symbol_set - Symbol set to choose from first (then fallback to default)
+ * @param {null|string} exclusive_symbols - !! Only choose from selected symbol set
+ * @param {null|string} single_symbol - !! Only use the symbol name provided.
+ * @param {string} color_set - Color scheme to pick from.
+ * @param {boolean} single_color - !! Only pick one color. TODO: have this be the color code?
+ * @param {boolean} rotation - Rotate symbols randomly.
+ * @param {boolean} safety - Generator safety override.
+ * @param {boolean} nonce - Prevents duplicate tiles (prevented by safety) from being interchangeable
+ */
+function plan_content(size, steps, shuffles = 0,
+                      image_override= null,
+                      symbol_set= 'default', exclusive_symbols = null, single_symbol = null,
+                      color_set = 'default', single_color = false,
+                      rotation = true, safety= true, nonce = true) {
+
+    if (image_override !== null && safety) {
+        // oh baby I don't think I've used a ternary in 8 years
+        const color_total = single_color ? 1 : colors[color_set].length;
+        // Good habits never die
+        //  overlap of requested and default set not considered because it's tedious and you're probably fine.
+        const symbol_total = single_symbol ? 1 : exclusive_symbols ? symbols[symbol_set].length : symbols['default'].length;
+        // I ALREADY TOLD YOU IT'S FINE! ...probably
+        const rotation_total = rotation ? 100 : 1;
+        if (color_total * symbol_total * rotation_total < size * size) {
+            throw "Not enough potential tiles :(";
+        }
+    }
+    // RENDER NOTE BEFORE I FORGET:
+    //  invert svg colors when background is sufficiently dark (abs dif within some value - black is 0 so RGB sum < threhsold?)
+    //  style="filter: invert(1);"
+    //  alternatively, always have the svg be the inverse of the background it's on?
+
+    // ...why do I return the grid anyway, I don't think it has any use.
+    const [grid, actual_moves, pos_map] = plan_puzz(size, steps, shuffles)
+
+
+}
 
 const puzzleContainer = document.getElementById('puzzle-container');
 const solutionContainer = document.getElementById('solution-container');
@@ -220,7 +285,7 @@ function render_puzzle() {
         for (let j = 0; j < size; j++) {
             const tile = document.createElement('div');
             tile.classList.add('puzzle-tile');
-            tile.style.background = colors[getRandomInt(colors.length)];
+            tile.style.background = colors.get('default')[getRandomInt(colors.get('default').length)];
             // tile.innerText = symbols[getRandomInt(symbols.length)];
             // happy pride, idk why the class is bi
             tile.innerHTML = `<svg class="bi" fill="currentColor"><use xlink:href="svg/bootstrap-icons.svg#sunglasses"/></svg>`
@@ -271,4 +336,5 @@ Configurable:
 * Default is symbols/colors? Single symbol mode that does rotation. Default also does rotation but symbol is unique? Color similarity mode?
 
 Reset button does not refund moves, goes back to original layout. Only running out regenerates
+have the button that makes a new puzzle go "you still have moves, don't give up :)"
 */
