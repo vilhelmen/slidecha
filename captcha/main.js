@@ -269,11 +269,15 @@ let shuffle = 0;
  * @param {boolean} safety - Generator safety override.
  * @param {boolean} nonce - Prevents duplicate tiles (prevented by safety) from being interchangeable
  */
-function plan_content(size, steps, shuffles = 0,
+function plan_content({size, steps, shuffles = 0,
                       image_override= null,
-                      symbol_set= 'default', exclusive_symbols = false, single_symbol = null,
+                      symbol_set= 'emojis', exclusive_symbols = false, single_symbol = null,
                       color_set = 'default', single_color = false, invert_symbol = 'always',
-                      rotation = true, safety= true, nonce = true) {
+                      rotation = true, safety= true, nonce = true} = {}) {
+
+    if (! (size || steps)) {
+        throw new Error('size or steps must be invalid');
+    }
 
     if (image_override == null && safety) {
         // oh baby I don't think I've used a ternary in 8 years
@@ -282,9 +286,9 @@ function plan_content(size, steps, shuffles = 0,
         //  overlap of requested and default set not considered because it's tedious and you're probably fine.
         const symbol_total = single_symbol ? 1 : exclusive_symbols ? symbols.get(symbol_set).length : symbols.get('default').length;
         // I ALREADY TOLD YOU IT'S FINE! ...probably
-        const rotation_total = rotation ? 100 : 1;
+        const rotation_total = rotation ? 36 : 1;
         if (color_total * symbol_total * rotation_total < size * size) {
-            throw "Not enough potential tiles :(";
+            throw new Error("Not enough potential tiles :(");
         }
     }
 
@@ -343,7 +347,7 @@ function plan_content(size, steps, shuffles = 0,
             if (rotation && selected_rotation) {
                 symbol.setAttribute('transform', `rotate(${selected_rotation})`);
             }
-            symbol.innerHTML = `<use xlink:href="svg/bootstrap-icons.svg#${selected_symbol}"/>`;
+            symbol.innerHTML = `<use xlink:href="bootstrap-icons.svg#${selected_symbol}"/>`;
             tile.appendChild(symbol);
 
             tile.dataset.index = tile_number.toString();
@@ -378,9 +382,11 @@ function render_puzzle() {
     solutionContainer.style.gap = '0px';
 
     const [tiles, init_map, moves] = plan_content(
-        size, steps, shuffle,
-        null, 'mycoin', true, null,
-        'default', false, 'B&W', false);
+        {
+            size: size, steps: steps, shuffles: shuffle,
+            symbol_set: 'mycoin', exclusive_symbols: true,
+            color_set: 'default', invert_symbol: 'B&W', rotation: false
+        });
 
     for (let i = 0; i < size*size; i++) {
         // Lol a second .appendChild yoinks it away from the first parent (something something custody).
