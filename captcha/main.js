@@ -77,16 +77,17 @@ function plan_puzz(size = 3, shifts= 4, shuffle = 0) {
         grid[b_row][b_col] = tmp;
     }
 
-    const pos_map = new Map()
+    const position_map = new Map()
     for (let i = 0; i < size; i++) {
         for (let j = 0; j < size; j++) {
-            // tile x is now at y
-            pos_map.set(grid[i][j], j + (size*i));
+            // grid position x -> tile number y
+            position_map.set(j + (size*i), grid[i][j]);
         }
     }
+    // ... actually I need this inverted to load the grid easier
+    // const inv_map = new Map([...position_map].map(([k, v]) => [v, k]));
 
-
-    return [grid, actual_moves, pos_map];
+    return [grid, actual_moves, position_map];
 }
 
 // ty MDN, I'm sorry Mozilla keeps making terrible business decisions
@@ -153,7 +154,16 @@ const colors = new Map([
     // another I like https://coolors.co/palette/f94144-f3722c-f8961e-f9844a-f9c74f-90be6d-43aa8b-4d908e-577590-277da1
     // But I don't care for the 4th and I think the 8 and 9 are too similar to 7 and 10
     //  but I don't like how unbalanced it is if I remove all three
-    ['another_one', ['#f94144', '#f3722c', '#f8961e', '#f9844a', '#f9c74f', '#90be6d', '#43aa8b', '#4d908e', '#577590', '#277da1']]
+    ['another_one', ['#f94144', '#f3722c', '#f8961e', '#f9844a', '#f9c74f', '#90be6d', '#43aa8b', '#4d908e', '#577590', '#277da1']],
+    // https://coolors.co/palette/001219-005f73-0a9396-94d2bd-e9d8a6-ee9b00-ca6702-bb3e03-ae2012-9b2226
+    //  the reds on the end are too similar imho
+    ['another_two', ['#001219','#005f73','#0a9396','#94d2bd','#e9d8a6','#ee9b00','#ca6702','#bb3e03','#ae2012','#9b2226']],
+    // https://coolors.co/palette/8ecae6-219ebc-023047-ffb703-fb8500
+    // ...is this bluey? also too small
+    ['bluey??', ['#8ecae6','#219ebc','#023047','#ffb703','#fb8500']],
+    // https://coolors.co/palette/ef476f-ffd166-06d6a0-118ab2-073b4c
+    // too small
+    ['another_three', ["#ef476f","#ffd166","#06d6a0","#118ab2","#073b4c"]]
     // TODO: find more I like :)
 ])
 
@@ -201,11 +211,30 @@ NOTE FROM BOOTSTRAP
 </svg>
  */
 
-let size = 4;
+function color_is_dark(color_code) {
+    // pls I just want a color type.
+    const color = parseInt(color_code.slice(1), 16);
+    // uhh I guess the true midpoint would be 384. Let's go with the mean value instead of sum < 300
+    if (((color & 0xFF) + ((color & 0xFF00) >> 8) + ((color & 0xFF0000) >> 16)) / 3 < 128) {
+        return true;
+    }
+}
+
+function get_nonce(len) {
+    const charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let nonce = '';
+    for (let i = 0; i < len; i++) {
+        nonce += charset.charAt(Math.floor(Math.random() * charset.length));
+    }
+    // swear to god if this generates duplicate strings I will riot
+    return nonce;
+}
+
+let size = 3;
 let steps = 4;
 let shuffle = 0;
 
-plan_puzz()
+
 
 /**
  * Plan puzzle content. Image puzzle will disable all other content settings.
@@ -222,6 +251,7 @@ plan_puzz()
  * - Disabling the safety will allow for explicitly bad combination (one color, one symbol, no rotation)
  *       but will also interfere with standard generation, so only disable if you want it to be bad.
  *     Duplicate tiles will not be interchangeable unless the nonce is off
+ * - Always inverting color can look nice at high saturations but may result in poor contrast with some colors.
  *
  * Idea: Reverse-colorblind mode, colors are generated notably close to each other. Maybe a similar rotation mode.
  *
@@ -230,45 +260,111 @@ plan_puzz()
  * @param {number} shuffles - !! Randomly shuffle tiles n times. basically guaranteed to break the puzzle.
  * @param {null|string} image_override - Use an image instead of symbols. Maybe the user's profile picture? :)
  * @param {string} symbol_set - Symbol set to choose from first (then fallback to default)
- * @param {null|string} exclusive_symbols - !! Only choose from selected symbol set
+ * @param {boolean} exclusive_symbols - !! Only choose from selected symbol set
  * @param {null|string} single_symbol - !! Only use the symbol name provided.
  * @param {string} color_set - Color scheme to pick from.
  * @param {boolean} single_color - !! Only pick one color. TODO: have this be the color code?
+ * @param {string} invert_symbol - Set symbol stroke to the background's inverse. One of 'always', 'dark', 'B&W', or 'never'
  * @param {boolean} rotation - Rotate symbols randomly.
  * @param {boolean} safety - Generator safety override.
  * @param {boolean} nonce - Prevents duplicate tiles (prevented by safety) from being interchangeable
  */
 function plan_content(size, steps, shuffles = 0,
                       image_override= null,
-                      symbol_set= 'default', exclusive_symbols = null, single_symbol = null,
-                      color_set = 'default', single_color = false,
+                      symbol_set= 'default', exclusive_symbols = false, single_symbol = null,
+                      color_set = 'default', single_color = false, invert_symbol = 'always',
                       rotation = true, safety= true, nonce = true) {
 
-    if (image_override !== null && safety) {
+    if (image_override == null && safety) {
         // oh baby I don't think I've used a ternary in 8 years
-        const color_total = single_color ? 1 : colors[color_set].length;
+        const color_total = single_color ? 1 : colors.get(color_set).length;
         // Good habits never die
         //  overlap of requested and default set not considered because it's tedious and you're probably fine.
-        const symbol_total = single_symbol ? 1 : exclusive_symbols ? symbols[symbol_set].length : symbols['default'].length;
+        const symbol_total = single_symbol ? 1 : exclusive_symbols ? symbols.get(symbol_set).length : symbols.get('default').length;
         // I ALREADY TOLD YOU IT'S FINE! ...probably
         const rotation_total = rotation ? 100 : 1;
         if (color_total * symbol_total * rotation_total < size * size) {
             throw "Not enough potential tiles :(";
         }
     }
+
     // RENDER NOTE BEFORE I FORGET:
-    //  invert svg colors when background is sufficiently dark (abs dif within some value - black is 0 so RGB sum < threhsold?)
     //  style="filter: invert(1);"
-    //  alternatively, always have the svg be the inverse of the background it's on?
+    // but also that doesn't apply to background, only color. so if we set color to background and filter doesn't work
+    //  then everything is invisible, whoops. I may be willing ot take that risk
+    const code_set = new Set()
+    const tiles = [];
+    const total_tiles = size * size;
+
+    let color_pool = [];
+    let symbol_pool = [];
+    const symbols_exhausted = false;
+    const only_color = single_color ? colors[color_set][getRandomInt(colors[color_set].length)] : false;
+    const only_symbol = single_symbol ? single_symbol : false;
+
+    do {
+        // refill color pool
+        if (color_pool.length === 0) {
+            // shallow copy alert
+            // You can't index a map???? why is colors[color_set] undefined
+            color_pool = only_color ? [only_color] : Array.from(colors.get(color_set));
+        }
+        // refill symbol pool
+        if (symbol_pool.length === 0) {
+            // Have I mentioned I've missed ternaries?
+            symbol_pool = only_symbol ? [only_symbol] : Array.from(symbols_exhausted ? symbols.get('default') : symbols.get(symbol_set));
+        }
+        const selected_color_idx = getRandomInt(color_pool.length);
+        const selected_color = color_pool[selected_color_idx];
+        const selected_symbol_idx = getRandomInt(symbol_pool.length);
+        const selected_symbol = symbol_pool[selected_symbol_idx];
+        const selected_rotation = rotation ? getRandomInt(36) * 10 : 0; // 0 - 350 in increments of 10
+        const tile_code = selected_color + '!' + selected_symbol + '!' + selected_rotation;
+        let tile_number = 0;
+
+        // unique tile or we don't care
+        if (! code_set.has(tile_code) || ! safety) {
+            const tile = document.createElement('div');
+            tile.classList.add('puzzle-tile');
+            tile.style.background = selected_color;
+
+            const symbol = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+            if (invert_symbol === 'always' || (invert_symbol === 'dark' && color_is_dark(selected_color)) ) {
+                symbol.setAttribute('fill', selected_color);
+                // big uh-oh, if something can't do invert they will be invisible lol
+                symbol.setAttribute('filter', 'invert(1)');
+            } else if (invert_symbol === 'B&W') {
+                if (color_is_dark(selected_color)) {
+                    symbol.setAttribute('fill', 'white')
+                } else {
+                    symbol.setAttribute('fill', 'black')
+                }
+            }
+            if (rotation && selected_rotation) {
+                symbol.setAttribute('transform', `rotate(${selected_rotation})`);
+            }
+            symbol.innerHTML = `<use xlink:href="svg/bootstrap-icons.svg#${selected_symbol}"/>`;
+            tile.appendChild(symbol);
+
+            tile.dataset.index = tile_number.toString();
+            tile.dataset.code = nonce ? tile_code + '!' + get_nonce(6) : tile_code;
+
+            color_pool.splice(selected_color_idx, 1);
+            symbol_pool.splice(selected_symbol_idx, 1);
+            code_set.add(tile_code);
+            tiles.push(tile);
+        }
+    } while (tiles.length !== total_tiles);
 
     // ...why do I return the grid anyway, I don't think it has any use.
     const [grid, actual_moves, pos_map] = plan_puzz(size, steps, shuffles)
-
-
+    return [tiles, pos_map, actual_moves]
 }
 
 const puzzleContainer = document.getElementById('puzzle-container');
 const solutionContainer = document.getElementById('solution-container');
+
+const text_dump = document.getElementById('puzzle-addons');
 
 function render_puzzle() {
     puzzleContainer.innerHTML = '';
@@ -281,43 +377,19 @@ function render_puzzle() {
     solutionContainer.style.gridTemplateRows = `repeat(${size}, 1fr)`;
     solutionContainer.style.gap = '0px';
 
-    for (let i = 0; i < size; i++) {
-        for (let j = 0; j < size; j++) {
-            const tile = document.createElement('div');
-            tile.classList.add('puzzle-tile');
-            tile.style.background = colors.get('default')[getRandomInt(colors.get('default').length)];
-            // tile.innerText = symbols[getRandomInt(symbols.length)];
-            // happy pride, idk why the class is bi
-            tile.innerHTML = `<svg class="bi" fill="currentColor"><use xlink:href="svg/bootstrap-icons.svg#sunglasses"/></svg>`
-            //tile.firstChild.setAttribute('transform', 'rotate(45)');
+    const [tiles, init_map, moves] = plan_content(
+        size, steps, shuffle,
+        null, 'mycoin', true, null,
+        'default', false, 'B&W', false);
 
-            tile.dataset.num = j + (size*i);
-            puzzleContainer.appendChild(tile);
-
-            const solutionTile = document.createElement('div');
-            solutionTile.classList.add('puzzle-tile');
-            solutionTile.style.background = tile.style.background;
-            solutionTile.innerHTML = tile.innerHTML;
-            // this is bad actually, but the upper tile nums are wrong. and need to be set by initial state
-            solutionTile.dataset.num = tile.dataset.num;
-            solutionContainer.appendChild(solutionTile);
-        }
+    for (let i = 0; i < size*size; i++) {
+        // Lol a second .appendChild yoinks it away from the first parent (something something custody).
+        //  although I bet you could do some tricky stuff with that.
+        puzzleContainer.appendChild(tiles[init_map.get(i)]);
+        solutionContainer.appendChild(tiles[i].cloneNode(true));
     }
 
-
-    // need to pick apart modes, figure out html/css for each and re-inject. or plan ahead of time.
-    // That's probably smarter
-
-    // base mode would pull from symbol set generically without replacement and pair with a color (also no replace)
-    //  (no replace until forced, that is). Also generate rotation but that is more complicated wrt: tracking
-    //   We should try to avoid near angles of the same color/symbol pair
-    //  track generated (as string I guess) for rejection. I don't like all this random selection w/ reject
-    //   this should be less bad compared to init shuffle... probably.
-    // alt mode would pull from forced set first, then generic (repeat warning) OR only set.
-    //  Potential exhaustion based on definition of "near" angles and bad symbol/tile ratio
-    // alt mode is single color all same symbol, rotation only, uncap nearness check, or reduce significantly
-    // also the option to just have it be a picture lmao all my work!!!!
-
+    text_dump.innerText += ` :: expected moves to soln: ${moves}`;
 }
 
 /*

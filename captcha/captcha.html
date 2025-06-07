@@ -143,55 +143,6 @@
       z-index: 10;
     }
 
-    .puzzle-tile .overlay-top {
-      top: 0;
-      left: 10%;
-      width: 80%;
-      height: 25%;
-    }
-
-    .puzzle-tile .overlay-bottom {
-      bottom: 0;
-      left: 10%;
-      width: 80%;
-      height: 25%;
-    }
-
-    .puzzle-tile .overlay-left {
-      top: 10%;
-      left: 0;
-      height: 80%;
-      width: 25%;
-    }
-
-    .puzzle-tile .overlay-right {
-      top: 10%;
-      right: 0;
-      height: 80%;
-      width: 25%;
-    }
-
-    /* Hover state for desktop (remains the same): */
-    .puzzle-tile:hover .overlay-control {
-      opacity: 1;
-    }
-
-    /* always render hover controls on small screens */
-    @media (max-width: 768px) {
-      .puzzle-tile .overlay-control {
-        opacity: 1 !important;
-      }
-    }
-
-    /* some junk to always display until first interact but will need some JS somewhere */
-    .puzzle-container[data-controls-shown="true"] .overlay-control {
-      opacity: 1;
-    }
-
-    .puzzle-container[data-controls-shown="false"] .overlay-control {
-      opacity: 0;
-    }
-
   </style>
 </head>
 
