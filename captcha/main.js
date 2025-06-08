@@ -429,7 +429,7 @@ function render_puzzle() {
                 const idx = j + (size * i);
                 // Lol a second .appendChild yoinks it away from the first parent (something something custody).
                 //  although I bet you could do some tricky stuff with that.
-                // this is the easy one, you can have the real tile
+                // this is the easy one, you can have the generated tile
                 solutionContainer.appendChild(tiles[idx]);
 
                 // you... are a problem
@@ -439,7 +439,7 @@ function render_puzzle() {
                 base_element.dataset.row = i.toString();
                 base_element.dataset.index = idx.toString();
 
-                const puzzle_tile = tiles[idx].cloneNode(true);
+                const puzzle_tile = tiles[init_map.get(idx)].cloneNode(true);
                 base_element.appendChild(puzzle_tile);
 
                 const overlay = document.createElement('div');
