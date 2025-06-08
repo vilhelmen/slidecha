@@ -423,32 +423,34 @@ function render_puzzle() {
             color_set: 'default', invert_symbol: 'B&W', rotation: false
         });
 
-    for (let i = 0; i < size; i++) {
-        for (let j = 0; j < size; j++) {
-            const idx = j + (size*i);
-            // Lol a second .appendChild yoinks it away from the first parent (something something custody).
-            //  although I bet you could do some tricky stuff with that.
-            // this is the easy one, you can have the real tile
-            solutionContainer.appendChild(tiles[idx]);
+    requestAnimationFrame(() => {
+        for (let i = 0; i < size; i++) {
+            for (let j = 0; j < size; j++) {
+                const idx = j + (size * i);
+                // Lol a second .appendChild yoinks it away from the first parent (something something custody).
+                //  although I bet you could do some tricky stuff with that.
+                // this is the easy one, you can have the real tile
+                solutionContainer.appendChild(tiles[idx]);
 
-            // you... are a problem
-            const base_element = document.createElement('div');
-            base_element.classList.add('tile-base');
-            base_element.dataset.col = j.toString();
-            base_element.dataset.row = i.toString();
-            base_element.dataset.index = idx.toString();
+                // you... are a problem
+                const base_element = document.createElement('div');
+                base_element.classList.add('tile-base');
+                base_element.dataset.col = j.toString();
+                base_element.dataset.row = i.toString();
+                base_element.dataset.index = idx.toString();
 
-            const puzzle_tile = tiles[idx].cloneNode(true);
-            base_element.appendChild(puzzle_tile);
+                const puzzle_tile = tiles[idx].cloneNode(true);
+                base_element.appendChild(puzzle_tile);
 
-            const overlay = document.createElement('div');
-            overlay.classList.add('tile-overlay');
-            overlay.addEventListener('click', tile_clicked)
-            base_element.appendChild(overlay);
+                const overlay = document.createElement('div');
+                overlay.classList.add('tile-overlay');
+                overlay.addEventListener('click', tile_clicked)
+                base_element.appendChild(overlay);
 
-            puzzleContainer.appendChild(base_element);
+                puzzleContainer.appendChild(base_element);
+            }
         }
-    }
+    });
 
     text_dump.innerText += ` :: expected moves to soln: ${moves}`;
 }
