@@ -370,6 +370,41 @@ const solutionContainer = document.getElementById('solution-container');
 
 const text_dump = document.getElementById('puzzle-addons');
 
+function tile_clicked(event) {
+    const clicked_base = event.target.parentElement;
+    if (clicked_base.dataset.active) {
+        requestAnimationFrame(() => {
+            const base_tiles = Array.from(puzzleContainer.querySelectorAll('.tile-base'));
+            base_tiles.forEach(item => {
+                // item.classList.add('disabled-hover');
+                const overlay = item.querySelector('.tile-overlay');
+                delete item.dataset.active;
+                overlay.classList.remove('highlighted', 'lowlighted');
+            });
+        });
+    }
+    else {
+        requestAnimationFrame(() => {
+            const base_tiles = Array.from(puzzleContainer.querySelectorAll('.tile-base'));
+            base_tiles.forEach(item => {
+                // item.classList.add('disabled-hover');
+                const overlay = item.querySelector('.tile-overlay');
+                delete item.dataset.active;
+                if (item.dataset.col === clicked_base.dataset.col ||
+                    item.dataset.row === clicked_base.dataset.row) {
+                    overlay.classList.add('highlighted');
+                    overlay.classList.remove('lowlighted');
+                } else {
+                    overlay.classList.remove('highlighted');
+                    overlay.classList.add('lowlighted');
+                }
+                delete overlay.parentElement.dataset.active;
+            });
+            event.target.parentElement.dataset.active = "yes";
+        });
+    }
+}
+
 function render_puzzle() {
     puzzleContainer.innerHTML = '';
     puzzleContainer.style.gridTemplateColumns = `repeat(${size}, 1fr)`;
@@ -388,11 +423,31 @@ function render_puzzle() {
             color_set: 'default', invert_symbol: 'B&W', rotation: false
         });
 
-    for (let i = 0; i < size*size; i++) {
-        // Lol a second .appendChild yoinks it away from the first parent (something something custody).
-        //  although I bet you could do some tricky stuff with that.
-        puzzleContainer.appendChild(tiles[init_map.get(i)]);
-        solutionContainer.appendChild(tiles[i].cloneNode(true));
+    for (let i = 0; i < size; i++) {
+        for (let j = 0; j < size; j++) {
+            const idx = j + (size*i);
+            // Lol a second .appendChild yoinks it away from the first parent (something something custody).
+            //  although I bet you could do some tricky stuff with that.
+            // this is the easy one, you can have the real tile
+            solutionContainer.appendChild(tiles[idx]);
+
+            // you... are a problem
+            const base_element = document.createElement('div');
+            base_element.classList.add('tile-base');
+            base_element.dataset.col = j.toString();
+            base_element.dataset.row = i.toString();
+            base_element.dataset.index = idx.toString();
+
+            const puzzle_tile = tiles[idx].cloneNode(true);
+            base_element.appendChild(puzzle_tile);
+
+            const overlay = document.createElement('div');
+            overlay.classList.add('tile-overlay');
+            overlay.addEventListener('click', tile_clicked)
+            base_element.appendChild(overlay);
+
+            puzzleContainer.appendChild(base_element);
+        }
     }
 
     text_dump.innerText += ` :: expected moves to soln: ${moves}`;
@@ -415,4 +470,6 @@ Configurable:
 
 Reset button does not refund moves, goes back to original layout. Only running out regenerates
 have the button that makes a new puzzle go "you still have moves, don't give up :)"
+
+render a little overlay on the solution to show which are correct? little checkmark or x in the corner?
 */
