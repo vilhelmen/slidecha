@@ -211,13 +211,27 @@ NOTE FROM BOOTSTRAP
 </svg>
  */
 
+function color_to_rgb(color_code) {
+    const color = parseInt(color_code.slice(1), 16);
+    return [color & 0xFF, (color & 0xFF00) >> 8, (color & 0xFF0000) >> 16]
+}
+
 function color_is_dark(color_code) {
     // pls I just want a color type.
-    const color = parseInt(color_code.slice(1), 16);
-    // uhh I guess the true midpoint would be 384. Let's go with the mean value instead of sum < 300
-    if (((color & 0xFF) + ((color & 0xFF00) >> 8) + ((color & 0xFF0000) >> 16)) / 3 < 128) {
-        return true;
+    const [r, g, b] = color_to_rgb(color_code);
+    return (r + g + b) / 3 < 128
+}
+
+
+function invert_style_color(color_string) {
+    // ...colors coming out of .style are rgb(a??)()
+    const parts = color_string.match(/\d+/g); // Extracts numbers
+    if (!parts || parts.length !== 3) {
+        console.warn("Invalid RGB color string:", rgbColorString);
+        return "black"; // Fallback color
     }
+
+    return `rgb(${255 - parseInt(parts[0])}, ${255 - parseInt(parts[1])}, ${255 - parseInt(parts[2])})`;
 }
 
 function get_nonce(len) {
@@ -230,7 +244,7 @@ function get_nonce(len) {
     return nonce;
 }
 
-let size = 3;
+let size = 5;
 let steps = 4;
 let shuffle = 0;
 
@@ -367,40 +381,141 @@ function plan_content({size, steps, shuffles = 0,
 
 const puzzleContainer = document.getElementById('puzzle-container');
 const solutionContainer = document.getElementById('solution-container');
+const captchaContainer = document.getElementById('captcha-container');
+const controlContainer = document.getElementById('control-container');
 
 const text_dump = document.getElementById('puzzle-addons');
 
+function register_flipper() {
+    const flip_button = document.getElementById('control-9');
+    // const flip_overlay = flip_button.querySelector('.tile-overlay');
+
+    const dyn_left = document.getElementById('dynamic-top-left');
+    const puzzle_holder = document.getElementById('puzzle-holder');
+    const dyn_right = document.getElementById('dynamic-top-right');
+    const solution_holder = document.getElementById('solution-holder');
+
+    flip_button.addEventListener('click', (event) => {
+        requestAnimationFrame(() => {
+            if (!flip_button.classList.contains('active')) {
+                dyn_left.appendChild(solution_holder);
+                dyn_right.appendChild(puzzle_holder);
+                flip_button.classList.add('active');
+            } else {
+                dyn_left.appendChild(puzzle_holder);
+                dyn_right.appendChild(solution_holder);
+                flip_button.classList.remove('active');
+            }
+            flip_button.classList.toggle('swapped');
+        });
+    });
+}
+
+function register_reset() {
+    const reset_button = document.getElementById('control-3');
+    const click_eater = document.getElementById('click-eater');
+    const overlay = reset_button.getElementsByClassName('tile-overlay')[0];
+    const reset_slider = document.getElementById('reset-confirm');
+    let waiting_for_confirm = false;
+
+
+    reset_button.addEventListener('click', (event) => {
+        event.stopPropagation();
+        requestAnimationFrame(() => {
+            if (waiting_for_confirm) {
+                // confirmed, wreck up the place
+                // eventually. Probably render a temp overlay
+                click_eater.classList.remove('active', 'reset');
+                reset_button.classList.remove('active');
+                reset_slider.classList.remove('active');
+                waiting_for_confirm = false;
+            } else {
+                // ...I guess if you resized we should do this dynamically, not just once
+                //const container_rect = controlContainer.getBoundingClientRect();
+
+                reset_slider.classList.add('active');
+                click_eater.classList.add('active', 'reset');
+                reset_button.classList.add('active');
+                waiting_for_confirm = true;
+            }
+        });
+    });
+
+    click_eater.addEventListener('click', (event) => {
+        // clicked somewhere else
+        if (waiting_for_confirm) {
+            requestAnimationFrame(() => {
+                click_eater.classList.remove('active', 'reset');
+                reset_button.classList.remove('active');
+                reset_slider.classList.remove('active');
+                waiting_for_confirm = false;
+            });
+        }
+        console.log('eaten')
+    });
+
+}
+
+/**
+ * Inject button control logic, etc
+ */
+function inject_controls() {
+
+    register_flipper();
+
+    register_reset();
+
+    //register_info();
+
+
+
+}
+
+
 function tile_clicked(event) {
-    const clicked_base = event.target.parentElement;
+    // on click, highlight the row/col, lowlight the others.
+    //  when clicking the already selected tile, clear everything.
+    const clicked_base = event.target.closest('.tile-base');
+    // const border_thickness = event.target.offsetWidth
+
     if (clicked_base.dataset.active) {
+        // kill the lights
         requestAnimationFrame(() => {
             const base_tiles = Array.from(puzzleContainer.querySelectorAll('.tile-base'));
             base_tiles.forEach(item => {
                 // item.classList.add('disabled-hover');
                 const overlay = item.querySelector('.tile-overlay');
                 delete item.dataset.active;
-                overlay.classList.remove('highlighted', 'lowlighted');
+                overlay.classList.remove('highlighted', 'lowlighted', 'active-tile');
             });
         });
     }
     else {
+        // highlight/lowlight
         requestAnimationFrame(() => {
             const base_tiles = Array.from(puzzleContainer.querySelectorAll('.tile-base'));
             base_tiles.forEach(item => {
                 // item.classList.add('disabled-hover');
                 const overlay = item.querySelector('.tile-overlay');
                 delete item.dataset.active;
+                overlay.classList.remove('highlighted', 'lowlighted', 'active-tile');
                 if (item.dataset.col === clicked_base.dataset.col ||
                     item.dataset.row === clicked_base.dataset.row) {
                     overlay.classList.add('highlighted');
-                    overlay.classList.remove('lowlighted');
                 } else {
-                    overlay.classList.remove('highlighted');
                     overlay.classList.add('lowlighted');
                 }
                 delete overlay.parentElement.dataset.active;
             });
-            event.target.parentElement.dataset.active = "yes";
+            clicked_base.dataset.active = "yes";
+
+            //const color = invert_style_color(clicked_base.querySelector('.puzzle-tile').style.background);
+
+            //overlay.style.outlineColor = color;
+            // event.target.style.setProperty('--active-outline-color', color);
+            event.target.classList.add('active-tile');
+
+
         });
     }
 }
@@ -444,6 +559,23 @@ function render_puzzle() {
 
                 const overlay = document.createElement('div');
                 overlay.classList.add('tile-overlay');
+
+                // I like border dashed but it has an inconsistent number of dashes which gets me
+                //  This is really the only somewhat reasonable svg in the set for this
+                //   and I still don't like it.
+                // Maybe border inset is fine. Or groove.
+                /*
+                const avtivity_symbol = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+                avtivity_symbol.hidden = true;
+                avtivity_symbol.style.width = '95%';
+                avtivity_symbol.style.height = '95%';
+                avtivity_symbol.setAttribute('fill', puzzle_tile.style.background);
+                // big uh-oh, if something can't do invert they will be invisible lol
+                avtivity_symbol.setAttribute('filter', 'invert(1)');
+                avtivity_symbol.innerHTML = `<use xlink:href="bootstrap-icons.svg#fullscreen"/>`;
+                overlay.appendChild(avtivity_symbol);
+                */
+
                 overlay.addEventListener('click', tile_clicked)
                 base_element.appendChild(overlay);
 

@@ -13,91 +13,153 @@
       font-family: sans-serif;
     }
 
+    :root {
+      /* --base-opacity: 0; */
+      --highlighted-opacity: 0.3;
+      --lowlighted-opacity: 0.3;
+      --hover-opacity: 0.3;
+      --horz-padding: 8px; /* idk how to fr you */
+      /*--left-column-width: 7fr;*/
+      --active-outline-color: orange;
+    }
+
     #captcha-container {
       background: white;
       width: 390px;
       height: 300px;
-
       display: grid;
-      grid-template-rows: 70% 30%;
-    }
-
-    #upper-container {
-      display: grid;
-      /*grid-template-columns: 7fr 0.5fr 5.5fr;*/
-      grid-template-columns: 7fr 6fr;
-      height: 100%;
-      width: 100%;
+      /* 8px is PERFECT at 390x300. I wish I could do an fr that good it's 2/75ths and that's .0266666... */
+      grid-template-columns: 230fr 8fr 152fr;
       overflow: hidden;
-      background: green;
     }
 
-    #upper-spacer {
+    /* I'm still in a dream */
+    #click-eater {
+      position: absolute;
+      top: 0;
+      left: 0;
       width: 100%;
       height: 100%;
-      background: red;
+      z-index: 20;
+
+      opacity: 0;
+      cursor: pointer;
+      user-select: none;
+
+      pointer-events: none;
+      visibility: hidden;
+      /*  changes to pointer-events kills animations so you have to trick it with visibility */
+      transition: opacity 0.3s ease, background-color 0.3s ease, visibility 0s 0.3s;
+    }
+    #click-eater.active {
+      opacity: 1;
+      pointer-events: auto;
+      visibility: visible;
+      transition: opacity 0.3s ease, background-color 0.3s ease, visibility 0s;
+    }
+    #click-eater.reset {
+      background-color: rgba(0,0,0,0.5);
     }
 
-    #puzzle-holder {
+    #left-container,
+    #right-container {
       display: flex;
+      flex-direction: column;
+      height: 100%;
+      width: 100%;
+    }
+
+    .vertical-divider {
+      height: 100%;
+      background: lightgray;
+    }
+    .horizontal-divider {
+      height: var(--horz-padding);
+      width: 100%;
+      background: lightgray;
+      flex-shrink: 0;
+      box-sizing: border-box;
+    }
+
+    #dynamic-top-left,
+    #dynamic-top-right {
+      display: flex;
+      flex-direction: column;
       justify-content: center;
       align-items: center;
+      flex-shrink: 0;
+      flex-grow: 0;
+      flex-basis: auto;
       width: 100%;
-      height: 100%;
-      background: darkgoldenrod;
     }
 
-    #puzzle-container {
-      display: grid;
-      background: yellow;
-      gap: 0;
+    #captcha-container > div,
+    #left-container > div,
+    #right-container > div,
+    #dynamic-top-left,
+    #dynamic-top-right,
+    #puzzle-holder,
+    #solution-holder,
+    #control-holder > *,
+    .tile-base,
+    .puzzle-tile,
+    .control-tile {
+      min-height: 0;
+      min-width: 0;
+    }
+
+    #puzzle-holder,
+    #solution-holder {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      flex-shrink: 0;
+      flex-grow: 0;
+      flex-basis: auto;
+      box-sizing: border-box;
+      width: 100%;
+    }
+
+    #puzzle-addons,
+    #control-holder {
+      display: flex;
+      flex-direction: column;
+      flex-grow: 1;
+      flex-basis: 0;
+      width: 100%;
+      box-sizing: border-box;
+      min-height: 0;
     }
 
     #puzzle-addons {
-      display: grid;
       background: aqua;
-      height: 100%;
-      width: 100%;
     }
-    #upper-right {
+
+    #puzzle-container,
+    #solution-container,
+    #control-container {
       display: grid;
-      justify-content: center;
-      align-items: center;
-      width: 100%;
-      min-width: 0%;
-      height: 100%;
-
-      background: blue;
-      overflow: hidden;
-      /*grid-template-rows: 1fr 8fr 1fr;*/
-      grid-template-rows: 8fr 2fr;
-      grid-template-columns: 1fr;
-    }
-
-    #solution-holder {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      width: 100%;
-      height: 100%;
-      background: purple;
-    }
-
-    #solution-container {
-      display: grid;
-      background: hotpink;
       gap: 0;
+      box-sizing: border-box;
+      width: 100%;
+      min-height: 0;
+      min-width: 0;
     }
 
-    #solution-top {
-      background: white;
-      width: 100%;
-      height: 100%;
+    #puzzle-container,
+    #solution-container {
+      aspect-ratio: 1;
     }
-    #solution-bottom {
-      background: white;
-      width: 100%;
-      height: 100%;
+
+    #control-container {
+      position: relative;
+      grid-template-rows: repeat(3, 1fr);
+      grid-template-columns: repeat(3, 1fr);
+      flex-grow: 1;
+      flex-shrink: 1;
+      flex-basis: 0;
+      background-color: #D3D3D3;
     }
 
     #solution-preview img {
@@ -110,14 +172,19 @@
       position: relative;
       width: 100%;
       height: 100%;
-      background: teal;
-    }
-
-    .puzzle-tile {
+      /* cursor: pointer;  not for blank tiles, move to overlay */
       display: flex;
       justify-content: center;
       align-items: center;
-      cursor: pointer;
+      box-sizing: border-box;
+    }
+
+    .puzzle-tile,
+    .control-tile,
+    .tile-overlay{
+      display: flex;
+      justify-content: center;
+      align-items: center;
       box-sizing: border-box;
       user-select: none;
       aspect-ratio: 1;
@@ -125,29 +192,37 @@
       min-height: 0;
       width: 100%;
 
-      /* tbh I have no idea what this is going to do */
+      /* tbh I have no idea what this is going to do yet*/
       transition: transform 0.3s ease-out;
     }
 
-    .puzzle-tile svg {
+    .control-tile {
+      aspect-ratio: unset;
+    }
+
+    .active-tile {
+      outline: #666 groove 3px;
+      outline-offset: -3px;
+    }
+
+    /*
+    idk!
+    .active-tile {
+      border: var(--active-border-width) var(--active-border-style) var(--active-border-color);
+    }
+    */
+
+    .puzzle-tile svg,
+    .control-tile svg,
+    .tile-overlay svg {
       display: block;
-      width: 80%;
-      height: 80%;
+      max-width: 80%;
+      max-height: 80%;
+      aspect-ratio: 1;
       /*box-sizing: border-box;
       border: 1px dashed orange;*/
       object-fit: contain;
-    }
-
-    :root {
-      /* --base-opacity: 0; */
-      --highlighted-opacity: 0.3;
-      --lowlighted-opacity: 0.3;
-      --hover-opacity: 0.3;
-    }
-
-    .tile-base {
-      position: relative;
-      cursor:pointer;
+      pointer-events: none;
     }
 
     .tile-base .tile-overlay {
@@ -156,55 +231,223 @@
       bottom: 0;
       left: 0;
       right: 0;
-      opacity: 0;
       background: #000000;
       cursor: pointer;
       z-index: 10;
-      transition: opacity 0.3s, background-color 0.3s;
+      transition: opacity 0.3s ease, transform 0.3s ease, background-color 0.3s ease;
+
+      --current-base-opacity: 0;
+      opacity: var(--current-base-opacity);
     }
 
-    .tile-base .highlighted {
+    .control-tile .tile-overlay {
       background: white;
-      opacity: var(--highlighted-opacity);
+    }
+
+    /*.tile-overlay > svg {
+      opacity: 0;
+      max-width: unset;
+      max-height: unset;
+      transition: opacity 0.3s ease;
+    }
+    .tile-overlay.active-tile > svg {
+      opacity: 1;
+    }*/
+
+    .tile-base .tile-overlay.highlighted {
+      background: white;
+      --current-base-opacity: var(--highlighted-opacity);
     }
 
     .tile-base .lowlighted {
       background: black;
-      opacity: var(--lowlighted-opacity);
+      --current-base-opacity: var(--lowlighted-opacity);
     }
 
     .tile-base:hover .tile-overlay {
+      opacity: calc(var(--current-base-opacity) + var(--hover-opacity));
+    }
+
+    #control-container {
+      fill: black;
+    }
+    #control-1 svg,
+    #control-9 svg {
+      height: 65%;
+      width: 65%;
+    }
+
+    #control-3 {
+      fill: red;
+    }
+    #control-3 .tile-overlay {
+      transition: width 0.3s ease-in-out;
+      right: 0;
+      left: auto;
+      width: 100%;
+    }
+    #control-3.active svg,
+    #control-3.active .tile-overlay,
+    #control-3.active .control-tile {
+      z-index: 30;
+    }
+    #control-3.active .control-tile {
+      background: red;
+      fill: white;
+    }
+    #control-3.active .tile-overlay {
+      /*visibility: hidden;*/
+      width: 300%;
       opacity: var(--hover-opacity);
     }
+    /* UGH THIS IS SO BUSTED> I can't get it to transition back to 0 deg after deactivating without snapping*/
+    #control-3 svg {
+      transform-origin: center;
+      transition: transform 0.3s ease-in-out;
+      animation: rotateSvg 2s linear infinite paused;
+    }
+    #control-3.active svg {
+      transform: rotate(360deg);
+      animation-play-state: running;
+    }
+    @keyframes rotateSvg {
+      from {
+        transform: rotate(0deg);
+      }
+      to {
+        transform: rotate(360deg);
+      }
+    }
+    #reset-confirm {
+      position: absolute;
+      visibility: hidden;
+      background-color: red;
+      color: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      user-select : none;
+      height: 100%;
+      width: 0;
+      right: 0;
+      overflow: hidden;
 
-    .tile-base.highlighted:hover .tile-overlay,
-    .tile-base.lowlighted:hover .tile-overlay {
-      opacity: calc(var(--highlighted-opacity) + var(--hover-opacity));
+      /*opacity: 0;*/
+      pointer-events: none;
+      transition: background-color 0.3s ease, opacity 0.3s ease, width 0.3s ease-in-out, visibility 0s 0.3s;
+    }
+    #reset-confirm.active {
+      visibility: visible;
+      /*opacity: 1;*/
+      pointer-events: auto;
+      z-index: 29;
+      background: red;
+      width: 200%;
+      transition: background-color 0.3s ease, opacity 0.3s ease, width 0.3s ease-in-out, visibility 0s;
+    }
+    #reset-confirm span {
+      position: absolute;
+      white-space: nowrap;
+      transition: right 0.3s ease-in-out;
+      text-align: center;
+      width: 100%;
+      right: -100%;
+    }
+    #reset-confirm.active span {
+      right: 0;
     }
 
-    /*.disabled-hover .tile-overlay {
-      pointer-events: none;
-      opacity: 0 !important;
-    }*/
+    #control-9 svg {
+      transition: transform 0.3s ease;
+    }
+    #control-9.active svg {
+      transform: scale(-1, -1);
+    }
+
+
 
   </style>
 </head>
 
 <body>
-  <div id="captcha-container">
-    <div id="upper-container">
+<div id="captcha-container">
+  <div id="left-container">
+    <div id="dynamic-top-left">
       <div id="puzzle-holder"><div id="puzzle-container"></div></div>
-      <!--<div id="upper-spacer"></div>-->
-      <div id="upper-right">
-          <!--<div id="solution-top"><- turn this</div>-->
-          <div id="solution-holder"><div id="solution-container"></div></div>
-          <div id="solution-bottom"><- turn this into this ^</div>
-        </div>
     </div>
-    <div id="lower-container">
-      <div id="puzzle-addons">things go here, maybe make smaller but that shrinks the soln more</div>
-    </div>
+    <div class="horizontal-divider"></div>
+    <!--<div id="upper-spacer"></div>-->
+    <div id="puzzle-addons">placeholder 1, maybe make smaller but that shrinks the soln more</div>
+    <!-- person svg ====== robot svg have it swing percentages across the bar semi-arbitrarily. Also on click-->
+    <!-- Timer that just goes up and gets red human-robot bar constantly drains and only goes up on puzzle move? -->
+    <!-- condescending emotional support -->
   </div>
+  <div class="vertical-divider"></div>
+  <div id="right-container">
+    <div id="dynamic-top-right">
+      <div id="solution-holder"><div id="solution-container"></div></div>
+      <!-- record record-fill for progress stop stop-fill or triangle triangle-fill triangle-half, or diamond-xx-->
+    </div>
+    <div class="horizontal-divider"></div>
+    <div id="control-holder">
+        <div id="control-container">
+          <div class="tile-base" id="control-1">
+            <div class="control-tile">
+              <!-- just a tad too large compared to reset, shrink moved to css -->
+              <svg><use xlink:href="bootstrap-icons.svg#info-circle"/></svg>
+              <!-- info-square info-circle question-square question-circle -->
+              <div class="tile-overlay"></div>
+            </div>
+          </div>
+          <div class="tile-base" id="control-2">
+            <div class="control-tile">
+              <svg><use xlink:href="bootstrap-icons.svg#arrow-up-square"/></svg>
+              <!-- arrow-up-circle ? caret-up-square ? chevron-double-up -->
+              <div class="tile-overlay"></div>
+              <div id="reset-confirm"><span>Reset?</span></div>
+            </div>
+          </div>
+          <div class="tile-base" id="control-3">
+            <div class="control-tile">
+              <svg><use xlink:href="bootstrap-icons.svg#arrow-repeat"/></svg>
+              <!-- repeat reply skip-start-circle skip-start-->
+              <div class="tile-overlay"></div>
+            </div>
+          </div>
+          <div class="tile-base" id="control-4">
+            <div class="control-tile">
+              <svg><use xlink:href="bootstrap-icons.svg#arrow-left-square"/></svg>
+              <div class="tile-overlay"></div>
+            </div>
+          </div>
+          <div class="tile-base" id="control-5"></div> <!-- ??? -->
+          <div class="tile-base" id="control-6">
+            <div class="control-tile">
+              <svg><use xlink:href="bootstrap-icons.svg#arrow-right-square"/></svg>
+              <div class="tile-overlay"></div>
+            </div>
+          </div>
+          <div class="tile-base" id="control-7"></div> <!-- ??? -->
+          <div class="tile-base" id="control-8">
+            <div class="control-tile">
+              <svg><use xlink:href="bootstrap-icons.svg#arrow-down-square"/></svg>
+              <div class="tile-overlay"></div>
+            </div>
+          </div>
+          <div class="tile-base" id="control-9">
+            <div class="control-tile">
+              <svg><use xlink:href="bootstrap-icons.svg#layout-wtf"/></svg>
+              <!-- columns-gap layout-wtf -->
+              <!-- I love that but I should probably use arrows-angle-expand and arrows-angle-shrink -->
+              <div class="tile-overlay"></div>
+            </div>
+          </div> <!-- reset, flip text/symbol on click to a confirm -->
+        </div>
+      </div>
+  </div>
+  <div id="click-eater"><p>THE DIV RENDERS</p></div>
+
+</div>
 
   <script type="text/javascript" src="main.js"></script>
 
@@ -214,6 +457,8 @@
       function captchaSuccess() {
         window.top.postMessage("success", '*');
       }
+
+      inject_controls()
 
       render_puzzle()
 
