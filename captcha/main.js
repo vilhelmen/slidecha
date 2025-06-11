@@ -388,7 +388,7 @@ const text_dump = document.getElementById('puzzle-addons');
 
 function register_flipper() {
     const flip_button = document.getElementById('control-9');
-    // const flip_overlay = flip_button.querySelector('.tile-overlay');
+    const svg_element = flip_button.getElementsByTagName('svg')[0];
 
     const dyn_left = document.getElementById('dynamic-top-left');
     const puzzle_holder = document.getElementById('puzzle-holder');
@@ -406,7 +406,6 @@ function register_flipper() {
                 dyn_right.appendChild(solution_holder);
                 flip_button.classList.remove('active');
             }
-            flip_button.classList.toggle('swapped');
         });
     });
 }
@@ -414,7 +413,7 @@ function register_flipper() {
 function register_reset() {
     const reset_button = document.getElementById('control-3');
     const click_eater = document.getElementById('click-eater');
-    const overlay = reset_button.getElementsByClassName('tile-overlay')[0];
+    //const overlay = reset_button.getElementsByClassName('tile-overlay')[0];
     const reset_slider = document.getElementById('reset-confirm');
     let waiting_for_confirm = false;
 
@@ -453,7 +452,60 @@ function register_reset() {
         }
         console.log('eaten')
     });
+}
 
+function register_quit() {
+    const quit_button = document.getElementById('control-7');
+    const click_eater = document.getElementById('click-eater');
+    //const overlay = reset_button.getElementsByClassName('tile-overlay')[0];
+    const quit_slider = document.getElementById('quit-confirm');
+    let waiting_for_confirm = false;
+
+
+    quit_button.addEventListener('click', (event) => {
+        event.stopPropagation();
+        requestAnimationFrame(() => {
+            if (waiting_for_confirm) {
+                // confirmed, wreck up the place
+                // eventually. Probably render a temp overlay
+                click_eater.classList.remove('active', 'reset');
+                quit_button.classList.remove('active');
+                quit_slider.classList.remove('active');
+                waiting_for_confirm = false;
+            } else {
+                // ...I guess if you resized we should do this dynamically, not just once
+                //const container_rect = controlContainer.getBoundingClientRect();
+
+                quit_slider.classList.add('active');
+                click_eater.classList.add('active', 'reset');
+                quit_button.classList.add('active');
+                waiting_for_confirm = true;
+            }
+        });
+    });
+
+    click_eater.addEventListener('click', (event) => {
+        // clicked somewhere else
+        if (waiting_for_confirm) {
+            requestAnimationFrame(() => {
+                click_eater.classList.remove('active', 'quit');
+                quit_button.classList.remove('active');
+                quit_slider.classList.remove('active');
+                waiting_for_confirm = false;
+            });
+        }
+        console.log('eaten')
+    });
+}
+
+/**
+ * Flash SVG - call inside an anim frame.
+ * @param elem - SVG element
+ */
+function trigger_flash(elem) {
+    elem.style.animation = 'none';
+    void elem.getBoundingClientRect(); // this forces things to recalculate so the animation reapplies
+    elem.style.animation = 'var(--flash-animation-params)';
 }
 
 /**
@@ -464,6 +516,8 @@ function inject_controls() {
     register_flipper();
 
     register_reset();
+
+    register_quit();
 
     //register_info();
 

@@ -20,7 +20,9 @@
       --hover-opacity: 0.3;
       --horz-padding: 8px; /* idk how to fr you */
       /*--left-column-width: 7fr;*/
-      --active-outline-color: orange;
+      --alert-color: #ff3030;
+      --flash-animation-params: flashBrightness 0.1s linear forwards;
+      --jump-animation-params: jump 1.5s linear forwards infinite;
     }
 
     #captcha-container {
@@ -234,7 +236,8 @@
       background: #000000;
       cursor: pointer;
       z-index: 10;
-      transition: opacity 0.3s ease, transform 0.3s ease, background-color 0.3s ease;
+
+      transition: opacity 0.3s ease, transform 0.3s ease, background-color 0.3s ease, width 0.3s ease-in-out;
 
       --current-base-opacity: 0;
       opacity: var(--current-base-opacity);
@@ -272,42 +275,53 @@
       fill: black;
     }
     #control-1 svg,
+    #control-7 svg,
     #control-9 svg {
       height: 65%;
       width: 65%;
     }
 
-    #control-3 {
-      fill: red;
+    #control-3,
+    #control-7 {
+      fill: var(--alert-color);
+    }
+    #control-3 .tile-overlay,
+    #control-7 .tile-overlay {
+      z-index: 12;
     }
     #control-3 .tile-overlay {
-      transition: width 0.3s ease-in-out;
       right: 0;
       left: auto;
       width: 100%;
     }
+    #control-7 .tile-overlay {
+      left: 0;
+      right: auto;
+      width: 100%;
+    }
     #control-3.active svg,
+    #control-7.active svg,
     #control-3.active .tile-overlay,
-    #control-3.active .control-tile {
+    #control-7.active .tile-overlay,
+    #control-3.active .control-tile,
+    #control-7.active .control-tile {
       z-index: 30;
     }
-    #control-3.active .control-tile {
-      background: red;
+    #control-3.active .control-tile,
+    #control-7.active .control-tile {
+      background: var(--alert-color);
       fill: white;
     }
-    #control-3.active .tile-overlay {
-      /*visibility: hidden;*/
+    #control-3.active .tile-overlay,
+    #control-7.active .tile-overlay {
       width: 300%;
-      opacity: var(--hover-opacity);
     }
     /* UGH THIS IS SO BUSTED> I can't get it to transition back to 0 deg after deactivating without snapping*/
     #control-3 svg {
       transform-origin: center;
-      transition: transform 0.3s ease-in-out;
       animation: rotateSvg 2s linear infinite paused;
     }
     #control-3.active svg {
-      transform: rotate(360deg);
       animation-play-state: running;
     }
     @keyframes rotateSvg {
@@ -318,10 +332,12 @@
         transform: rotate(360deg);
       }
     }
-    #reset-confirm {
+
+    #reset-confirm,
+    #quit-confirm {
       position: absolute;
       visibility: hidden;
-      background-color: red;
+      background-color: var(--alert-color);
       color: white;
       display: flex;
       justify-content: center;
@@ -329,32 +345,51 @@
       user-select : none;
       height: 100%;
       width: 0;
-      right: 0;
       overflow: hidden;
+
+      /* important for quit because 8 and 9 have higher z because they're later? */
+      z-index: 11;
 
       /*opacity: 0;*/
       pointer-events: none;
-      transition: background-color 0.3s ease, opacity 0.3s ease, width 0.3s ease-in-out, visibility 0s 0.3s;
+      transition: background-color 2s ease, opacity 2s ease, width 2s ease-in-out, visibility 0s 2s;
     }
-    #reset-confirm.active {
+    #reset-confirm {
+      right: 100%;
+    }
+    #quit-confirm {
+      left: 100%;
+    }
+    #reset-confirm.active,
+    #quit-confirm.active {
       visibility: visible;
-      /*opacity: 1;*/
       pointer-events: auto;
       z-index: 29;
-      background: red;
+      background: var(--alert-color);
       width: 200%;
-      transition: background-color 0.3s ease, opacity 0.3s ease, width 0.3s ease-in-out, visibility 0s;
+      transition: background-color 2s ease, opacity 2s ease, width 2s ease-in-out, visibility 0s;
     }
     #reset-confirm span {
-      position: absolute;
       white-space: nowrap;
-      transition: right 0.3s ease-in-out;
+      transition: right 2s ease-in-out;
       text-align: center;
       width: 100%;
       right: -100%;
+      left: 0;
+    }
+    #quit-confirm span {
+      white-space: nowrap;
+      transition: left 2s ease-in-out;
+      text-align: center;
+      width: 100%;
+      left: -100%;
+      right: 0;
     }
     #reset-confirm.active span {
-      right: 0;
+      left: 0;
+    }
+    #quit-confirm.active span {
+      left: 0;
     }
 
     #control-9 svg {
@@ -362,6 +397,33 @@
     }
     #control-9.active svg {
       transform: scale(-1, -1);
+    }
+
+    #control-1 svg,
+    #control-2 svg,
+    #control-4 svg,
+    #control-6 svg,
+    #control-8 svg {
+      animation: var(--flash-animation-params) paused;
+    }
+    @keyframes flashBrightness {
+      0% { opacity: 1; }
+      50% { opacity: 0.3 }
+      100% { opacity: 1; }
+    }
+
+    #control-7 svg {
+      animation: var(--jump-animation-params) paused;
+    }
+    #control-7.active svg {
+      animation-play-state: running;
+    }
+
+    @keyframes jump {
+      0% { transform: translateY(0); }
+      10% { transform: translateY(-12%); }
+      90% { transform: translateY(12%); }
+      100% { transform: translateY(0); }
     }
 
 
@@ -377,7 +439,7 @@
     </div>
     <div class="horizontal-divider"></div>
     <!--<div id="upper-spacer"></div>-->
-    <div id="puzzle-addons">placeholder 1, maybe make smaller but that shrinks the soln more</div>
+    <div id="puzzle-addons">placeholder 1</div>
     <!-- person svg ====== robot svg have it swing percentages across the bar semi-arbitrarily. Also on click-->
     <!-- Timer that just goes up and gets red human-robot bar constantly drains and only goes up on puzzle move? -->
     <!-- condescending emotional support -->
@@ -401,36 +463,43 @@
           </div>
           <div class="tile-base" id="control-2">
             <div class="control-tile">
-              <svg><use xlink:href="bootstrap-icons.svg#arrow-up-square"/></svg>
+              <svg><use xlink:href="bootstrap-icons.svg#caret-up-square-fill"/></svg>
               <!-- arrow-up-circle ? caret-up-square ? chevron-double-up -->
               <div class="tile-overlay"></div>
-              <div id="reset-confirm"><span>Reset?</span></div>
             </div>
           </div>
           <div class="tile-base" id="control-3">
             <div class="control-tile">
               <svg><use xlink:href="bootstrap-icons.svg#arrow-repeat"/></svg>
               <!-- repeat reply skip-start-circle skip-start-->
+              <!-- arrow-counterclockwise -->
+              <div id="reset-confirm"><span>Reset?</span></div>
               <div class="tile-overlay"></div>
             </div>
           </div>
           <div class="tile-base" id="control-4">
             <div class="control-tile">
-              <svg><use xlink:href="bootstrap-icons.svg#arrow-left-square"/></svg>
+              <svg><use xlink:href="bootstrap-icons.svg#caret-left-square-fill"/></svg>
               <div class="tile-overlay"></div>
             </div>
           </div>
           <div class="tile-base" id="control-5"></div> <!-- ??? -->
           <div class="tile-base" id="control-6">
             <div class="control-tile">
-              <svg><use xlink:href="bootstrap-icons.svg#arrow-right-square"/></svg>
+              <svg><use xlink:href="bootstrap-icons.svg#caret-right-square-fill"/></svg>
               <div class="tile-overlay"></div>
             </div>
           </div>
-          <div class="tile-base" id="control-7"></div> <!-- ??? -->
+          <div class="tile-base" id="control-7">
+            <div class="control-tile">
+              <svg><use xlink:href="bootstrap-icons.svg#eject"/></svg>
+              <div class="tile-overlay"></div>
+              <div id="quit-confirm"><span>Quit?</span></div>
+            </div>
+          </div> <!-- ??? -->
           <div class="tile-base" id="control-8">
             <div class="control-tile">
-              <svg><use xlink:href="bootstrap-icons.svg#arrow-down-square"/></svg>
+              <svg><use xlink:href="bootstrap-icons.svg#caret-down-square-fill"/></svg>
               <div class="tile-overlay"></div>
             </div>
           </div>
@@ -458,7 +527,7 @@
         window.top.postMessage("success", '*');
       }
 
-      inject_controls()
+      inject_controls();
 
       render_puzzle()
 
