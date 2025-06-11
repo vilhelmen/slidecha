@@ -123,7 +123,7 @@
       width: 100%;
     }
 
-    #puzzle-addons,
+    #addon-holder,
     #control-holder {
       display: flex;
       flex-direction: column;
@@ -134,7 +134,7 @@
       min-height: 0;
     }
 
-    #puzzle-addons {
+    #addon-holder {
       background: aqua;
     }
 
@@ -352,7 +352,7 @@
 
       /*opacity: 0;*/
       pointer-events: none;
-      transition: background-color 2s ease, opacity 2s ease, width 2s ease-in-out, visibility 0s 2s;
+      transition: background-color 0.3s ease, opacity 0.3s ease, width 0.3s ease-in-out, visibility 0s 0.3s;
     }
     #reset-confirm {
       right: 100%;
@@ -367,11 +367,11 @@
       z-index: 29;
       background: var(--alert-color);
       width: 200%;
-      transition: background-color 2s ease, opacity 2s ease, width 2s ease-in-out, visibility 0s;
+      transition: background-color 0.3s ease, opacity 0.3s ease, width 0.3s ease-in-out, visibility 0s;
     }
     #reset-confirm span {
       white-space: nowrap;
-      transition: right 2s ease-in-out;
+      transition: right 0.3s ease-in-out;
       text-align: center;
       width: 100%;
       right: -100%;
@@ -379,7 +379,7 @@
     }
     #quit-confirm span {
       white-space: nowrap;
-      transition: left 2s ease-in-out;
+      transition: left 0.3s ease-in-out;
       text-align: center;
       width: 100%;
       left: -100%;
@@ -407,9 +407,8 @@
       animation: var(--flash-animation-params) paused;
     }
     @keyframes flashBrightness {
-      0% { opacity: 1; }
+      0%, 100% { opacity: 1; }
       50% { opacity: 0.3 }
-      100% { opacity: 1; }
     }
 
     #control-7 svg {
@@ -420,10 +419,9 @@
     }
 
     @keyframes jump {
-      0% { transform: translateY(0); }
+      0%, 100% { transform: translateY(0); }
       10% { transform: translateY(-12%); }
       90% { transform: translateY(12%); }
-      100% { transform: translateY(0); }
     }
 
 
@@ -435,11 +433,17 @@
 <div id="captcha-container">
   <div id="left-container">
     <div id="dynamic-top-left">
-      <div id="puzzle-holder"><div id="puzzle-container"></div></div>
+      <div id="puzzle-holder"><div id="puzzle-container"></div>
+        <!-- little id popup for when we flip, tragically not shareable with help overlay? -->
+        <div class="container-id"><svg><use xlink:href="bootstrap-icons.svg#grid-3x3"/></svg></div>
+      </div>
     </div>
     <div class="horizontal-divider"></div>
     <!--<div id="upper-spacer"></div>-->
-    <div id="puzzle-addons">placeholder 1</div>
+    <!-- Shall I construct a div to hold the regards? -->
+    <div id="addon-holder"><div id="addon-container">placeholder 1</div>
+      <div class="container-id"><svg><use xlink:href="bootstrap-icons.svg#heart-pulse"/></svg></div>
+    </div>
     <!-- person svg ====== robot svg have it swing percentages across the bar semi-arbitrarily. Also on click-->
     <!-- Timer that just goes up and gets red human-robot bar constantly drains and only goes up on puzzle move? -->
     <!-- condescending emotional support -->
@@ -447,12 +451,15 @@
   <div class="vertical-divider"></div>
   <div id="right-container">
     <div id="dynamic-top-right">
-      <div id="solution-holder"><div id="solution-container"></div></div>
+      <div id="solution-holder"><div id="solution-container"></div>
+        <!-- what is image and why is it different from card-image ? width? -->
+        <div class="container-id"><svg><use xlink:href="bootstrap-icons.svg#card-image"/></svg></div>
+      </div>
       <!-- record record-fill for progress stop stop-fill or triangle triangle-fill triangle-half, or diamond-xx-->
     </div>
     <div class="horizontal-divider"></div>
     <div id="control-holder">
-        <div id="control-container">
+      <div id="control-container">
           <div class="tile-base" id="control-1">
             <div class="control-tile">
               <!-- just a tad too large compared to reset, shrink moved to css -->
@@ -473,7 +480,7 @@
               <svg><use xlink:href="bootstrap-icons.svg#arrow-repeat"/></svg>
               <!-- repeat reply skip-start-circle skip-start-->
               <!-- arrow-counterclockwise -->
-              <div id="reset-confirm"><span>Reset?</span></div>
+              <div id="reset-confirm"><span>Restart?</span></div>
               <div class="tile-overlay"></div>
             </div>
           </div>
@@ -507,12 +514,14 @@
             <div class="control-tile">
               <svg><use xlink:href="bootstrap-icons.svg#layout-wtf"/></svg>
               <!-- columns-gap layout-wtf -->
+              <!-- fullscreen fullscreen-exit ? -->
               <!-- I love that but I should probably use arrows-angle-expand and arrows-angle-shrink -->
               <div class="tile-overlay"></div>
             </div>
           </div> <!-- reset, flip text/symbol on click to a confirm -->
         </div>
-      </div>
+      <div class="container-id"><svg><use xlink:href="bootstrap-icons.svg#dpad"/></svg></div>
+    </div>
   </div>
   <div id="click-eater"><p>THE DIV RENDERS</p></div>
 

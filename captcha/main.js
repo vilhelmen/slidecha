@@ -384,7 +384,7 @@ const solutionContainer = document.getElementById('solution-container');
 const captchaContainer = document.getElementById('captcha-container');
 const controlContainer = document.getElementById('control-container');
 
-const text_dump = document.getElementById('puzzle-addons');
+const text_dump = document.getElementById('addon-container');
 
 function register_flipper() {
     const flip_button = document.getElementById('control-9');
