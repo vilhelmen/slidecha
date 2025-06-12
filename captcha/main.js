@@ -384,7 +384,7 @@ const solutionContainer = document.getElementById('solution-container');
 const captchaContainer = document.getElementById('captcha-container');
 const controlContainer = document.getElementById('control-container');
 
-const text_dump = document.getElementById('addon-container');
+const text_dump = document.getElementById('addon-moves');
 
 function register_flipper() {
     const flip_button = document.getElementById('control-9');
@@ -649,7 +649,7 @@ function render_puzzle() {
         }
     });
 
-    text_dump.innerText += ` :: expected moves to soln: ${moves}`;
+    text_dump.innerText += `soln: ${moves}`;
 }
 
 /*

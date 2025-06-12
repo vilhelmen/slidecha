@@ -14,13 +14,14 @@
     }
 
     :root {
-      /* --base-opacity: 0; */
       --highlighted-opacity: 0.3;
       --lowlighted-opacity: 0.3;
       --hover-opacity: 0.3;
-      --horz-padding: 8px; /* idk how to fr you */
-      /*--left-column-width: 7fr;*/
-      --alert-color: #ff3030;
+      --horz-padding: 2px; /* the last damn thing I can't make relative I hate you */
+      --nice-red: #ff3030;
+      /* well I like that red I made so... surely the green version is nice? */
+      /* ...actually it's not bad. a bit saturated. */
+      --nice-green: #30ff30;
       --button-flash-animation-params: flashBrightness 0.1s linear forwards;
       --id-flash-animation-params: idFlash 0.8s linear forwards;
       --jump-animation-params: jump 1.5s linear forwards infinite;
@@ -32,6 +33,7 @@
       height: 300px;
       display: grid;
       /* 8px is PERFECT at 390x300. I wish I could do an fr that good it's 2/75ths and that's .0266666... */
+      /* ...pixels are like fractional units if you think about it, or maybe if you don't */
       grid-template-columns: 230fr 8fr 152fr;
       overflow: hidden;
     }
@@ -96,9 +98,11 @@
       width: 100%;
     }
 
+    /* No, I don't entirely understand this, I just add things to it. why do you ask? */
     #captcha-container > div,
     #left-container > div,
     #right-container > div,
+    #addon-container > div,
     #dynamic-top-left,
     #dynamic-top-right,
     #puzzle-holder,
@@ -112,7 +116,8 @@
     }
 
     #puzzle-holder,
-    #solution-holder {
+    #solution-holder,
+    #addon-holder {
       display: flex;
       flex-direction: column;
       justify-content: center;
@@ -125,7 +130,6 @@
       position: relative;
     }
 
-    #addon-holder,
     #control-holder {
       display: flex;
       flex-direction: column;
@@ -137,13 +141,10 @@
       position: relative;
     }
 
-    #addon-holder {
-      background: aqua;
-    }
-
     #puzzle-container,
     #solution-container,
-    #control-container {
+    #control-container,
+    #addon-container {
       display: grid;
       gap: 0;
       box-sizing: border-box;
@@ -186,7 +187,7 @@
 
     .puzzle-tile,
     .control-tile,
-    .tile-overlay{
+    .tile-overlay {
       display: flex;
       justify-content: center;
       align-items: center;
@@ -219,7 +220,8 @@
 
     .puzzle-tile svg,
     .control-tile svg,
-    .tile-overlay svg {
+    .tile-overlay svg,
+    #addon-humanity svg {
       display: block;
       max-width: 80%;
       max-height: 80%;
@@ -286,7 +288,7 @@
 
     #control-3,
     #control-7 {
-      fill: var(--alert-color);
+      fill: var(--nice-red);
     }
     #control-3 .tile-overlay,
     #control-7 .tile-overlay {
@@ -312,7 +314,7 @@
     }
     #control-3.active .control-tile,
     #control-7.active .control-tile {
-      background: var(--alert-color);
+      background: var(--nice-red);
       fill: white;
     }
     #control-3.active .tile-overlay,
@@ -340,7 +342,7 @@
     #quit-confirm {
       position: absolute;
       visibility: hidden;
-      background-color: var(--alert-color);
+      background-color: var(--nice-red);
       color: white;
       display: flex;
       justify-content: center;
@@ -368,7 +370,7 @@
       visibility: visible;
       pointer-events: auto;
       z-index: 29;
-      background: var(--alert-color);
+      background: var(--nice-red);
       width: 200%;
       transition: background-color 0.3s ease, opacity 0.3s ease, width 0.3s ease-in-out, visibility 0s;
     }
@@ -426,7 +428,9 @@
       10% { transform: translateY(-12%); }
       90% { transform: translateY(12%); }
     }
-
+    .info {
+      opacity: 0;
+    }
     .container-id {
       aspect-ratio: 1;
       position: absolute;
@@ -458,9 +462,7 @@
     #solution-holder .container-id {
       width: 25%;
       height: 25%;
-      opacity: 0;
       animation: var(--id-flash-animation-params) paused;
-      animation-fill-mode: backwards;
     }
     @keyframes idFlash {
       0% { opacity: 0; } /* lmao you wanna be like this on first load then get owned */
@@ -468,6 +470,97 @@
       20% { opacity: 0.8; }
       100% { opacity: 0; }
     }
+
+
+
+
+
+    /* Idk why I need gro all over I hate this so much */
+    #addon-holder {
+      flex-grow: 1;
+      background: aqua;
+    }
+
+    #addon-container {
+      grid-template-rows: 1fr 2fr;
+      flex-grow: 1;
+    }
+
+    /* probably toss this div eventually, god forbid it's load bearing */
+    #addon-upper {
+      background: darkgray;
+    }
+
+    #addon-humanity {
+      display: flex;
+      flex-direction: row;
+
+      width: 100%;
+      height: 100%;
+      box-sizing: border-box;
+      /*justify-content: center;*/
+      justify-content: center;
+      gap: 5%;
+      align-items: center;
+
+      padding-left: 4%;
+      padding-right: 4%;
+    }
+
+    /* what do you MEAN browsers control progress bar objects too hard to style */
+
+    .progress-fill {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 50%;
+      height: 100%;
+      background: var(--nice-red);
+      transition: width 0.2s ease;
+    }
+    .progress-track {
+      position: relative;
+      flex-grow: 1;
+      flex-shrink: 1;
+      flex-basis: 0;
+
+      height: 60%;
+
+      background: var(--nice-green);
+      overflow: hidden;
+      border-radius: 0.5em;
+    }
+
+    #addon-humanity > .tile-base {
+      flex-grow: 0;
+      flex-basis: min-content;
+      aspect-ratio: 1;
+    }
+    #human {
+      fill: var(--nice-green)
+
+    }
+    #robot {
+      fill: var(--nice-red);
+    }
+
+
+    #addon-humanity svg {
+
+    }
+
+    #addon-lower {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      width: 100%;
+    }
+    #addon-moves {
+      background: green;
+    }
+    #addon-timer {
+      background: blue;
+    }
+
 
 
   </style>
@@ -485,8 +578,25 @@
     <div class="horizontal-divider"></div>
     <!--<div id="upper-spacer"></div>-->
     <!-- Shall I construct a div to hold the regards? -->
-    <div id="addon-holder"><div id="addon-container">placeholder 1</div>
+    <div id="addon-holder">
+      <div id="addon-container">
+        <div id="addon-upper">
+          <div id="addon-humanity">
+            <div class="tile-base"><svg id="robot"><use xlink:href="bootstrap-icons.svg#robot"/></svg></div>
+            <div class="progress-track"><div id="humanity" class="progress-fill"></div></div>
+            <div class="tile-base"><svg id="human"><use xlink:href="bootstrap-icons.svg#person-arms-up"/></svg></div>
+            <!-- person-fill person-arms-up person-standing -->
+          </div>
+        </div>
+        <div id="addon-lower">
+          <div id="addon-moves"></div>
+          <div id="addon-timer"></div>
+        </div>
+
+      </div>
+      <div id="affirmations" hidden>UGH FIGURE THIS OUT LATER</div>
       <div class="container-id"><svg><use xlink:href="bootstrap-icons.svg#heart-pulse"/></svg></div>
+      <div class="info" hidden> problem for later</div>
     </div>
     <!-- person svg ====== robot svg have it swing percentages across the bar semi-arbitrarily. Also on click-->
     <!-- Timer that just goes up and gets red human-robot bar constantly drains and only goes up on puzzle move? -->
@@ -497,6 +607,7 @@
     <div id="dynamic-top-right">
       <div id="solution-holder"><div id="solution-container"></div>
         <div class="container-id"><svg><use xlink:href="bootstrap-icons.svg#image"/></svg></div>
+        <div class="info"></div>
       </div>
       <!-- record record-fill for progress stop stop-fill or triangle triangle-fill triangle-half, or diamond-xx-->
     </div>
@@ -563,10 +674,10 @@
             </div>
           </div> <!-- reset, flip text/symbol on click to a confirm -->
         </div>
-      <div class="container-id" hidden><svg><use xlink:href="bootstrap-icons.svg#dpad"/></svg></div>
+      <div class="container-id"><svg><use xlink:href="bootstrap-icons.svg#dpad"/></svg></div>
     </div>
   </div>
-  <div id="click-eater"><p>THE DIV RENDERS</p></div>
+  <div id="click-eater"></div>
 
 </div>
 
