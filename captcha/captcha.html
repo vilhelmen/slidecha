@@ -21,7 +21,8 @@
       --horz-padding: 8px; /* idk how to fr you */
       /*--left-column-width: 7fr;*/
       --alert-color: #ff3030;
-      --flash-animation-params: flashBrightness 0.1s linear forwards;
+      --button-flash-animation-params: flashBrightness 0.1s linear forwards;
+      --id-flash-animation-params: idFlash 0.8s linear forwards;
       --jump-animation-params: jump 1.5s linear forwards infinite;
     }
 
@@ -121,6 +122,7 @@
       flex-basis: auto;
       box-sizing: border-box;
       width: 100%;
+      position: relative;
     }
 
     #addon-holder,
@@ -132,6 +134,7 @@
       width: 100%;
       box-sizing: border-box;
       min-height: 0;
+      position: relative;
     }
 
     #addon-holder {
@@ -396,7 +399,7 @@
       transition: transform 0.3s ease;
     }
     #control-9.active svg {
-      transform: scale(-1, -1);
+      transform: scale(-1, 1);
     }
 
     #control-1 svg,
@@ -404,7 +407,7 @@
     #control-4 svg,
     #control-6 svg,
     #control-8 svg {
-      animation: var(--flash-animation-params) paused;
+      animation: var(--button-flash-animation-params) paused;
     }
     @keyframes flashBrightness {
       0%, 100% { opacity: 1; }
@@ -425,8 +428,45 @@
     }
 
     .container-id {
-      display: none;
+      aspect-ratio: 1;
       position: absolute;
+      bottom: 0;
+      right: 0;
+      max-width: 50%;
+      max-height: 50%;
+      opacity: 0;
+      pointer-events: none;
+
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 15;
+      background: black;
+      border-radius: 0.5em;
+    }
+    .container-id.active {
+      opacity: 1;
+      background: unset;
+    }
+    .container-id svg {
+      width: 80%;
+      height: 80%;
+      fill: white;
+    }
+
+    #puzzle-holder .container-id,
+    #solution-holder .container-id {
+      width: 25%;
+      height: 25%;
+      opacity: 0;
+      animation: var(--id-flash-animation-params) paused;
+      animation-fill-mode: backwards;
+    }
+    @keyframes idFlash {
+      0% { opacity: 0; } /* lmao you wanna be like this on first load then get owned */
+      1% { opacity: 0.8; }
+      20% { opacity: 0.8; }
+      100% { opacity: 0; }
     }
 
 
@@ -456,8 +496,7 @@
   <div id="right-container">
     <div id="dynamic-top-right">
       <div id="solution-holder"><div id="solution-container"></div>
-        <!-- what is image and why is it different from card-image ? width? -->
-        <div class="container-id"><svg><use xlink:href="bootstrap-icons.svg#card-image"/></svg></div>
+        <div class="container-id"><svg><use xlink:href="bootstrap-icons.svg#image"/></svg></div>
       </div>
       <!-- record record-fill for progress stop stop-fill or triangle triangle-fill triangle-half, or diamond-xx-->
     </div>

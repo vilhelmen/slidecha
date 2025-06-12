@@ -395,8 +395,19 @@ function register_flipper() {
     const dyn_right = document.getElementById('dynamic-top-right');
     const solution_holder = document.getElementById('solution-holder');
 
+    const soln_id = solution_holder.getElementsByClassName('container-id')[0];
+    const puzzle_id = puzzle_holder.getElementsByClassName('container-id')[0];
+
     flip_button.addEventListener('click', (event) => {
         requestAnimationFrame(() => {
+
+            soln_id.style.animation = 'none';
+            puzzle_id.style.animation = 'none';
+            void soln_id.offsetHeight; // this forces things to recalculate so the animation reapplies
+            void puzzle_id.offsetHeight;
+            soln_id.style.animation = 'var(--id-flash-animation-params)';
+            puzzle_id.style.animation = 'var(--id-flash-animation-params)';
+
             if (!flip_button.classList.contains('active')) {
                 dyn_left.appendChild(solution_holder);
                 dyn_right.appendChild(puzzle_holder);
@@ -505,7 +516,7 @@ function register_quit() {
 function trigger_flash(elem) {
     elem.style.animation = 'none';
     void elem.getBoundingClientRect(); // this forces things to recalculate so the animation reapplies
-    elem.style.animation = 'var(--flash-animation-params)';
+    elem.style.animation = 'var(--button-flash-animation-params)';
 }
 
 /**
