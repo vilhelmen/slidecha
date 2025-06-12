@@ -509,11 +509,65 @@ function register_quit() {
     });
 }
 
+let humanity_active = true;
+const humanity_level = document.getElementById('humanity');
+const humanity_human = document.getElementById('human-tile');
+const humanity_robot = document.getElementById('robot-tile');
+/**
+ * Tweak humanity bar. Bar never passes 5% either end (10?).
+ *  Large movement always swings in the other direction
+ * @param {string} scale - One of 's', 'm', or 'l'
+ */
+function humanity_adjust(scale) {
+    // the got dang rng system doesn't have distributions
+    if (humanity_active) {
+        let move = getRandomInt(7);
+        const current_level = parseInt(humanity_level.style.width);
+        switch (scale) {
+            case 's':
+                // +- 10 units
+                break;
+            case 'm':
+                // 7s because it'll be less... round looking.
+                // +- 10-27 units
+                move += getRandomInt(12); // make it +-17
+                move += 10; // shift it over 10
+                break;
+            case 'l':
+                // +- 37-47 units
+                move += 31;
+                break;
+        }
+        // something something lock it and reverse it
+        if (Math.random() > 0.5 || (scale === 'l' && current_level > 50)) {
+            move = -move;
+        }
+
+        move = Math.max(7, Math.min(93, current_level + move));
+
+        requestAnimationFrame(() => {
+            humanity_level.style.width = move + '%';
+            if (move > 70) {
+                humanity_robot.classList.add('alert');
+            } else if (move < 25) {
+                humanity_human.classList.add('alert');
+            } else {
+                humanity_robot.classList.remove('alert');
+                humanity_human.classList.remove('alert');
+            }
+        });
+    }
+}
+function register_humanity() {
+    humanity_level.style.width = '50%';
+    setInterval(() => {humanity_adjust('s')}, 3000)
+}
+
 /**
  * Flash SVG - call inside an anim frame.
  * @param elem - SVG element
  */
-function trigger_flash(elem) {
+function button_flash(elem) {
     elem.style.animation = 'none';
     void elem.getBoundingClientRect(); // this forces things to recalculate so the animation reapplies
     elem.style.animation = 'var(--button-flash-animation-params)';
@@ -531,6 +585,8 @@ function inject_controls() {
     register_quit();
 
     //register_info();
+
+    register_humanity();
 
 
 

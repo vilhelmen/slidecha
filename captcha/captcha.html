@@ -19,9 +19,15 @@
       --hover-opacity: 0.3;
       --horz-padding: 2px; /* the last damn thing I can't make relative I hate you */
       --nice-red: #ff3030;
+      --nice-red-rgb: 255, 48, 48;
       /* well I like that red I made so... surely the green version is nice? */
       /* ...actually it's not bad. a bit saturated. */
       --nice-green: #30ff30;
+      --nice-green-rgb: 48, 255, 48;
+      /* tbh I think it looks best when tile-overlay is applying a highlight */
+      --nicer-red: #f17e78;
+      --nicer-green: #7ef178;
+
       --button-flash-animation-params: flashBrightness 0.1s linear forwards;
       --id-flash-animation-params: idFlash 0.8s linear forwards;
       --jump-animation-params: jump 1.5s linear forwards infinite;
@@ -465,10 +471,8 @@
       animation: var(--id-flash-animation-params) paused;
     }
     @keyframes idFlash {
-      0% { opacity: 0; } /* lmao you wanna be like this on first load then get owned */
-      1% { opacity: 0.8; }
-      20% { opacity: 0.8; }
-      100% { opacity: 0; }
+      0%, 100% { opacity: 0; } /* lmao you wanna be like this on first load then get owned */
+      1%, 20% { opacity: 0.8; }
     }
 
 
@@ -488,7 +492,7 @@
 
     /* probably toss this div eventually, god forbid it's load bearing */
     #addon-upper {
-      background: darkgray;
+      background: lightgray;
     }
 
     #addon-humanity {
@@ -513,10 +517,9 @@
       position: absolute;
       top: 0;
       left: 0;
-      width: 50%;
+      width: 0;
       height: 100%;
       background: var(--nice-red);
-      transition: width 0.2s ease;
     }
     .progress-track {
       position: relative;
@@ -531,22 +534,47 @@
       border-radius: 0.5em;
     }
 
+    #humanity {
+      /* JS CANT READ THIS AAA
+      width: 50%;
+      */
+      transition: width 1s ease-in-out;
+      /* I really wanted to animate the right edge, like make it wiggle, but I just can't */
+    }
+
     #addon-humanity > .tile-base {
       flex-grow: 0;
       flex-basis: min-content;
       aspect-ratio: 1;
+      overflow: hidden;
+      border-radius: 50%;
+      animation: humanityAlert 0.8s linear infinite paused;
+    }
+    #human-tile {
+      --flash-color-transparent: rgba(var(--nice-green-rgb), 0);
+      --flash-color-opaque: rgba(var(--nice-green-rgb), 0.8);
+      background-color: var(--flash-color-transparent);
+    }
+    #human-tile.alert {
+      animation-play-state: running;
     }
     #human {
-      fill: var(--nice-green)
-
+      fill: black;
+    }
+    #robot-tile {
+      --flash-color-transparent: rgba(var(--nice-red-rgb), 0);
+      --flash-color-opaque: rgba(var(--nice-red-rgb), 0.8);
+      background-color: var(--flash-color-transparent);
+    }
+    #robot-tile.alert {
+      animation-play-state: running;
     }
     #robot {
-      fill: var(--nice-red);
+      fill: black;
     }
-
-
-    #addon-humanity svg {
-
+    @keyframes humanityAlert {
+      0%, 80% { background-color: var(--flash-color-transparent); }
+      10%, 20% { background-color: var(--flash-color-opaque); }
     }
 
     #addon-lower {
@@ -561,6 +589,34 @@
       background: blue;
     }
 
+
+    /*#control-container {
+      background: linear-gradient(to bottom, #f0f0f0, #e0e0e0);
+    }*/
+    /*
+    #control-container {
+      background-color: #f5f5f5;
+      background-image: radial-gradient(#e0e0e0 2px, transparent 2px);
+      background-size: 8px 8px;
+    }
+
+    .control-tile,
+    .control-tile .tile-overlay {
+      border: 1px solid #ddd;
+      !*
+      aahh it needs fixing wrt confirms
+      border-left-color: transparent;
+      *!
+      border-radius: 4px;
+      box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
+    }
+
+    .control-tile:hover {
+      background-color: #f5f5f5;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+      transform: translateY(-1px);
+      transition: all 0.2s ease-out;
+    }*/
 
 
   </style>
@@ -582,9 +638,9 @@
       <div id="addon-container">
         <div id="addon-upper">
           <div id="addon-humanity">
-            <div class="tile-base"><svg id="robot"><use xlink:href="bootstrap-icons.svg#robot"/></svg></div>
+            <div class="tile-base" id="robot-tile"><svg id="robot"><use xlink:href="bootstrap-icons.svg#robot"/></svg></div>
             <div class="progress-track"><div id="humanity" class="progress-fill"></div></div>
-            <div class="tile-base"><svg id="human"><use xlink:href="bootstrap-icons.svg#person-arms-up"/></svg></div>
+            <div class="tile-base" id="human-tile"><svg id="human"><use xlink:href="bootstrap-icons.svg#person-arms-up"/></svg></div>
             <!-- person-fill person-arms-up person-standing -->
           </div>
         </div>
