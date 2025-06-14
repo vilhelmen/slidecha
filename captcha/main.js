@@ -618,22 +618,94 @@ function register_info() {
     });
 }
 
+// lots of nice options - tringle, dot, octagon, diamond, etc
+const progress_shape = 'triangle';
+/**
+ * Render progress graphic - does not request frame
+ */
+function render_progress() {
+    // I gotta figure out animation frames and different functions doing what.
+    //  if I request a frame inside a frame it goes to the next frame which isn't ideal.
+    const progressContainer = document.getElementById('addon-progress');
+    progressContainer.innerHTML = '';
+    if (current_puzzle !== -1) {
+        const full_tile = document.createElement('div');
+        full_tile.classList.add('tile-base');
+        const full_symbol = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        full_symbol.innerHTML = `<use xlink:href="bootstrap-icons.svg#${progress_shape}-fill"/>`
+        full_tile.appendChild(full_symbol);
+        for (let i = 0; i < (current_puzzle - 1); i++) {
+            progressContainer.appendChild(full_tile.cloneNode(true));
+        }
+
+        const half_tile = document.createElement('div');
+        half_tile.classList.add('tile-base');
+        const half_symbol = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        half_symbol.innerHTML = `<use xlink:href="bootstrap-icons.svg#${progress_shape}-half"/>`
+        half_tile.append(half_symbol)
+        progressContainer.appendChild(half_tile);
+    }
+
+    const empty_tile = document.createElement('div');
+    empty_tile.classList.add('tile-base');
+    const empty_symbol = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    empty_symbol.innerHTML = `<use xlink:href="bootstrap-icons.svg#${progress_shape}"/>`;
+    empty_tile.append(empty_symbol);
+
+    for (let i = current_puzzle < 0 ? 0 : current_puzzle; i < puzzles.length - 1; i++) {
+        progressContainer.appendChild(empty_tile.cloneNode(true));
+    }
+}
+
+/**
+ * Lock play region, either to force Start or Retry
+ * @param {boolean} failed - user failed - render failure state instead of start state
+ */
+function lock_play(failed = false) {
+    // just click the dang button, then snap off some click-eater settings
+    document.getElementById('control-7').click();
+
+}
+
+function init_flow() {
+    // kinda wihsing I had xx_clicked function
+    //  lmao or I can fake a click
+    // hello it is I, the user please tell me all about this thank you
+    document.getElementById('control-1').click();
+
+    if (puzzles.length !== 1) {
+        requestAnimationFrame(() => {
+            document.getElementById('addon-container').classList.add('show-progress');
+            render_progress();
+        });
+    }
+    // FIXME: render currently overrides the current puzzle number and that screws up progress_init
+
+
+
+}
+
+let initialized = false;
 /**
  * Inject button control logic, etc
  */
 function inject_controls() {
+    if (!initialized) {
+        initialized = true; // idk what could call this multiple times but idk what would happen if you did
 
-    register_flipper();
+        register_info();
+        init_flow(); // pls mask some init div pop in ty
+        // OR NOT >:C we look so bad on DOM load with blank panels
 
-    register_reset();
+        register_flipper();
 
-    register_quit();
+        register_reset();
 
-    register_info();
+        register_quit();
 
-    register_humanity();
+        register_humanity();
 
-
+    }
 
 }
 
@@ -686,25 +758,47 @@ function tile_clicked(event) {
     }
 }
 
+const puzzles = [
+    {
+        size: size, steps: steps, shuffles: shuffle,
+        symbol_set: 'mycoin', exclusive_symbols: true,
+        color_set: 'default', invert_symbol: 'B&W', rotation: false
+    },
+    {
+        size: 4, steps: 5, shuffles: false,
+        symbol_set: 'subscribe', exclusive_symbols: true,
+        color_set: 'another_three', invert_symbol: true, rotation: true
+    }
+];
+
+let current_puzzle = 0;
+
 function render_puzzle() {
-    puzzleContainer.innerHTML = '';
-    puzzleContainer.style.gridTemplateColumns = `repeat(${size}, 1fr)`;
-    puzzleContainer.style.gridTemplateRows = `repeat(${size}, 1fr)`;
-    puzzleContainer.style.gap = '0px';
+    if (current_puzzle === -1) {
+        // swap quit for start and lock frame
+        // FRICK I CAN'T SET QUIT CONFIRM STATUS FROM HERE
+        //  ...I don't really wanna expose it to globals, I'll have it check the current puzzle I guess.
+        //  better +1 global than +2 I GUESSSSSS
 
-    solutionContainer.innerHTML = '';
-    solutionContainer.style.gridTemplateColumns = `repeat(${size}, 1fr)`;
-    solutionContainer.style.gridTemplateRows = `repeat(${size}, 1fr)`;
-    solutionContainer.style.gap = '0px';
 
-    const [tiles, init_map, moves] = plan_content(
-        {
-            size: size, steps: steps, shuffles: shuffle,
-            symbol_set: 'mycoin', exclusive_symbols: true,
-            color_set: 'default', invert_symbol: 'B&W', rotation: false
-        });
+        current_puzzle = 0;
+        return
+    }
+
+    const [tiles, init_map, moves] = plan_content(puzzles[current_puzzle]);
 
     requestAnimationFrame(() => {
+        // get blasted
+        puzzleContainer.innerHTML = '';
+        puzzleContainer.style.gridTemplateColumns = `repeat(${size}, 1fr)`;
+        puzzleContainer.style.gridTemplateRows = `repeat(${size}, 1fr)`;
+        puzzleContainer.style.gap = '0px';
+
+        solutionContainer.innerHTML = '';
+        solutionContainer.style.gridTemplateColumns = `repeat(${size}, 1fr)`;
+        solutionContainer.style.gridTemplateRows = `repeat(${size}, 1fr)`;
+        solutionContainer.style.gap = '0px';
+
         for (let i = 0; i < size; i++) {
             for (let j = 0; j < size; j++) {
                 const idx = j + (size * i);

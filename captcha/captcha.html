@@ -11,11 +11,17 @@
 <div id="captcha-container">
   <div id="left-container">
     <div id="dynamic-top-left">
-      <div id="puzzle-holder"><div id="puzzle-container"></div>
+      <div id="puzzle-holder">
+        <div id="puzzle-container"></div>
         <!-- little id popup for when we flip, tragically not shareable with help overlay? -->
         <div class="container-id"><svg><use xlink:href="bootstrap-icons.svg#grid-3x3"/></svg></div>
         <div class="info-panel">
-          <div class="info-body"></div>
+          <div class="info-body">
+            <p>
+              Slide tiles until they match the provided image to prove you're human.<br><br>
+              Click a tile to select it and then an arrow to move the row or column.
+            </p>
+          </div>
         </div>
       </div>
     </div>
@@ -24,10 +30,7 @@
     <!-- Shall I construct a maze to hold the div? -->
     <div id="addon-holder">
       <div id="addon-container">
-        <div id="addon-progress">
-          <div class="tile-base"><svg><use xlink:href="bootstrap-icons.svg#triangle-fill"/></svg></div>
-          <div class="tile-base"><svg><use xlink:href="bootstrap-icons.svg#triangle-fill"/></svg></div>
-        </div>
+        <div id="addon-progress"></div>
         <div id="addon-upper">
           <div id="addon-humanity">
             <div class="tile-base" id="robot-tile"><svg id="robot"><use xlink:href="bootstrap-icons.svg#robot"/></svg></div>
@@ -41,27 +44,33 @@
           <div id="addon-moves">
             <div class="tile-base"><svg><use xlink:href="bootstrap-icons.svg#activity"/></svg></div>
             <div id="aa"></div>
-            <div class="tile-base">
-              <svg><use xlink:href="bootstrap-icons.svg#infinity"/></svg>
-            </div>
+            <div class="tile-base"><svg><use xlink:href="bootstrap-icons.svg#slash-lg"/></svg></div>
+            <div class="tile-base"><svg><use xlink:href="bootstrap-icons.svg#infinity"/></svg></div>
           </div>
         </div>
 
       </div>
       <div id="affirmations" hidden>UGH FIGURE THIS OUT LATER</div>
       <div class="container-id"><svg><use xlink:href="bootstrap-icons.svg#heart-pulse"/></svg></div>
-      <div class="info-panel"><p>aaa</p></div>
+      <div class="info-panel"><div class="info-body"><p>Your HumanRank™, elapsed time, progress, and moves are shown here; don't run out!</p></div></div>
     </div>
     <!-- person svg ====== robot svg have it swing percentages across the bar semi-arbitrarily. Also on click-->
     <!-- Timer that just goes up and gets red human-robot bar constantly drains and only goes up on puzzle move? -->
+    <!-- omg omg omg interrupt and lock if robot level is too log/too long and make them do something else, traditional captcha? -->
     <!-- condescending emotional support -->
   </div>
   <div class="vertical-divider"></div>
   <div id="right-container">
     <div id="dynamic-top-right">
-      <div id="solution-holder"><div id="solution-container"></div>
+      <div id="solution-holder">
+        <div id="solution-container"></div>
         <div class="container-id"><svg><use xlink:href="bootstrap-icons.svg#image"/></svg></div>
-        <div class="info-panel"><p>aaa</p></div>
+        <div class="info-panel"><div class="info-body">
+          <p>
+            Match the photo or set of tiles shown here.<br><br>
+            Click anywhere to close this message.
+          </p>
+        </div></div>
       </div>
       <!-- record record-fill for progress stop stop-fill or triangle triangle-fill triangle-half, or diamond-xx-->
     </div>
@@ -109,7 +118,7 @@
             <div class="control-tile">
               <svg><use xlink:href="bootstrap-icons.svg#eject"/></svg>
               <div class="tile-overlay"></div>
-              <div id="quit-confirm"><span>Quit?</span></div>
+              <div id="quit-confirm"><span>Try Again?</span></div>
             </div>
           </div> <!-- ??? -->
           <div class="tile-base" id="control-8">
@@ -129,7 +138,12 @@
           </div> <!-- reset, flip text/symbol on click to a confirm -->
         </div>
       <div class="container-id"><svg><use xlink:href="bootstrap-icons.svg#dpad"/></svg></div>
-      <div class="info-panel"><p>aaa</p></div>
+      <div class="info-panel"><div class="info-body">
+        <p>
+          Start, restart, and make moves here.<br><br>
+          You can also enlarge the solution or see this help again.
+        </p>
+      </div></div>
     </div>
   </div>
   <div id="click-eater"></div>

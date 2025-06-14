@@ -3,13 +3,14 @@ body {
     margin: 0;
     padding: 0;
     font-family: sans-serif;
+    font-size: 0.9em;
 }
 
 :root {
     --highlighted-opacity: 0.3;
     --lowlighted-opacity: 0.3;
     --hover-opacity: 0.3;
-    --horz-padding: 2px; /* the last damn thing I can't make relative I hate you */
+    --horz-padding: 0px; /* the last damn thing I can't make relative I hate you */
     --nice-red: #ff3030;
     --nice-red-rgb: 255, 48, 48;
     /* well I like that red I made so... surely the green version is nice? */
@@ -32,7 +33,7 @@ body {
     display: grid;
     /* 8px is PERFECT at 390x300. I wish I could do an fr that good it's 2/75ths and that's .0266666... */
     /* ...pixels are like fractional units if you think about it, or maybe if you don't */
-    grid-template-columns: 230fr 6fr 154fr;
+    grid-template-columns: 234fr 0fr 156fr;
     overflow: hidden;
 }
 
@@ -161,6 +162,8 @@ body {
 #puzzle-container,
 #solution-container {
     aspect-ratio: 1;
+    border: darkgrey groove 2px;
+    background: darkgrey;
 }
 
 #control-container {
@@ -314,6 +317,7 @@ idk!
     width: 100%;
 }
 
+
 #control-3.active svg,
 #control-7.active svg,
 #control-3.active .tile-overlay,
@@ -384,9 +388,12 @@ idk!
     visibility: visible;
     pointer-events: auto;
     z-index: 29;
-    background: var(--nice-red);
+    background-color: var(--nice-red);
     width: 200%;
     transition: background-color 0.3s ease, opacity 0.3s ease, width 0.3s ease-in-out, visibility 0s;
+}
+#quit-confirm.init {
+    background-color: var(--nice-green) !important;
 }
 
 #reset-confirm span {
@@ -446,7 +453,7 @@ idk!
 
 @keyframes jump {
     0%, 100% {transform: translateY(0);}
-    10% {transform: translateY(-12%);}
+    8% {transform: translateY(-12%);}
     90% {transform: translateY(12%);}
 }
 
@@ -466,10 +473,46 @@ idk!
     pointer-events: none;
     user-select: none;
 }
+p {
+    /* idk man I just wanna put words on the page */
+    margin: unset;
+}
 
 .info-panel.active {
     opacity: 1;
     z-index: 25;
+}
+.info-body {
+    position: absolute;
+    height: auto;
+    width: auto;
+}
+
+#puzzle-holder .info-body {
+    top: 5%;
+    left: 5%;
+    right: 20%;
+    bottom: 5%;
+}
+#addon-holder .info-panel {
+    justify-content: center;
+    align-items: center;
+    display: flex;
+}
+#addon-holder .info-body {
+    top: 2%;
+    bottom: 2%;
+    left: 4%;
+    right: 20%;
+    display: flex;
+    align-items: center;
+    text-align: center;
+}
+#control-holder .info-body,
+#solution-holder .info-body {
+    top: 5%;
+    left: 5%;
+    right: 5%;
 }
 
 .container-id {
@@ -477,8 +520,6 @@ idk!
     position: absolute;
     bottom: 4px;
     right: 4px;
-    max-width: 50%;
-    max-height: 50%;
     opacity: 0;
     pointer-events: none;
 
@@ -502,15 +543,17 @@ idk!
 }
 
 #puzzle-holder .container-id,
-#solution-holder .container-id,
-#controller-holder .container-id {
+#solution-holder .container-id {
     /* my large adult sons are simply too tall */
     width: 25%;
     height: 25%;
 }
+#control-holder .container-id {
+    width: 42%;
+    height: 42%;
+}
 #addon-holder .container-id {
     height: 70%;
-    max-width: 70%;
     max-height: 70%;
 }
 
@@ -533,28 +576,33 @@ idk!
 }
 
 #addon-container {
-    grid-template-rows: 0.5fr 1fr 2fr;
+    grid-template-rows: 0fr 1fr 2fr;
     flex-grow: 1;
 }
 
-/* probably toss this div eventually, god forbid it's load bearing */
-#addon-upper {
-    background: lightgray;
+
+
+/*
+ok, we only want this to render IFF there is more than one puzzle
+I was going to have two rows rules and activate a class to yoink it out and some JS to help
+but lmao you can set it to 0fr which is way smarter and funny, which is the most important part
+ well that didn't work anyway because the rows resize is instant
+ */
+#addon-container.show-progress {
+    grid-template-rows: 0.5fr 1fr 2fr;
 }
-
-
 #addon-progress {
     display: flex;
     flex-direction: row;
-    background: red;
+    background: lightgrey;
     width: 100%;
     height: 100%;
     box-sizing: border-box;
-    /*justify-content: center;*/
     justify-content: center;
     align-items: center;
-
+    /*transition: height 0.3s ease-out;*/
 }
+
 
 #addon-progress > .tile-base {
     flex-grow: 0;
@@ -574,6 +622,11 @@ idk!
 
 #addon-progress > .tile-base:nth-child(even) svg {
     transform: scaleY(-1);
+}
+
+/* probably toss this div eventually, god forbid it's load bearing */
+#addon-upper {
+    background: lightgray;
 }
 
 
@@ -599,12 +652,11 @@ idk!
 }
 
 /* what do you MEAN browsers control progress bar objects too hard to style */
-
 .progress-fill {
     position: absolute;
     top: 0;
     left: 0;
-    width: 0;
+    width: 50%; /* gotta, it looks bad on DOM load otherwise */
     height: 100%;
     background: var(--nice-red);
 
