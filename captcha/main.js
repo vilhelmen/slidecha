@@ -384,7 +384,10 @@ const solutionContainer = document.getElementById('solution-container');
 const captchaContainer = document.getElementById('captcha-container');
 const controlContainer = document.getElementById('control-container');
 
-const text_dump = document.getElementById('addon-moves');
+// OH IM STILLLL IN A DREEAAAAM
+const clickEater = document.getElementById('click-eater');
+
+const text_dump = document.getElementById('aa');
 
 function register_flipper() {
     const flip_button = document.getElementById('control-9');
@@ -423,7 +426,6 @@ function register_flipper() {
 
 function register_reset() {
     const reset_button = document.getElementById('control-3');
-    const click_eater = document.getElementById('click-eater');
     //const overlay = reset_button.getElementsByClassName('tile-overlay')[0];
     const reset_slider = document.getElementById('reset-confirm');
     let waiting_for_confirm = false;
@@ -435,7 +437,7 @@ function register_reset() {
             if (waiting_for_confirm) {
                 // confirmed, wreck up the place
                 // eventually. Probably render a temp overlay
-                click_eater.classList.remove('active', 'reset');
+                clickEater.classList.remove('active', 'reset');
                 reset_button.classList.remove('active');
                 reset_slider.classList.remove('active');
                 waiting_for_confirm = false;
@@ -444,30 +446,28 @@ function register_reset() {
                 //const container_rect = controlContainer.getBoundingClientRect();
 
                 reset_slider.classList.add('active');
-                click_eater.classList.add('active', 'reset');
+                clickEater.classList.add('active', 'reset');
                 reset_button.classList.add('active');
                 waiting_for_confirm = true;
             }
         });
     });
 
-    click_eater.addEventListener('click', (event) => {
+    clickEater.addEventListener('click', (event) => {
         // clicked somewhere else
         if (waiting_for_confirm) {
             requestAnimationFrame(() => {
-                click_eater.classList.remove('active', 'reset');
+                clickEater.classList.remove('active', 'reset');
                 reset_button.classList.remove('active');
                 reset_slider.classList.remove('active');
                 waiting_for_confirm = false;
             });
         }
-        console.log('eaten')
     });
 }
 
 function register_quit() {
     const quit_button = document.getElementById('control-7');
-    const click_eater = document.getElementById('click-eater');
     //const overlay = reset_button.getElementsByClassName('tile-overlay')[0];
     const quit_slider = document.getElementById('quit-confirm');
     let waiting_for_confirm = false;
@@ -479,37 +479,34 @@ function register_quit() {
             if (waiting_for_confirm) {
                 // confirmed, wreck up the place
                 // eventually. Probably render a temp overlay
-                click_eater.classList.remove('active', 'reset');
+                clickEater.classList.remove('active', 'reset');
                 quit_button.classList.remove('active');
                 quit_slider.classList.remove('active');
                 waiting_for_confirm = false;
             } else {
-                // ...I guess if you resized we should do this dynamically, not just once
-                //const container_rect = controlContainer.getBoundingClientRect();
-
                 quit_slider.classList.add('active');
-                click_eater.classList.add('active', 'reset');
+                clickEater.classList.add('active', 'reset');
                 quit_button.classList.add('active');
                 waiting_for_confirm = true;
             }
         });
     });
 
-    click_eater.addEventListener('click', (event) => {
+    clickEater.addEventListener('click', (event) => {
         // clicked somewhere else
         if (waiting_for_confirm) {
             requestAnimationFrame(() => {
-                click_eater.classList.remove('active', 'quit');
+                clickEater.classList.remove('active', 'quit');
                 quit_button.classList.remove('active');
                 quit_slider.classList.remove('active');
                 waiting_for_confirm = false;
             });
         }
-        console.log('eaten')
     });
 }
 
 let humanity_active = true;
+let humanity_nudge_cycle = 0;
 const humanity_level = document.getElementById('humanity');
 const humanity_human = document.getElementById('human-tile');
 const humanity_robot = document.getElementById('robot-tile');
@@ -523,10 +520,19 @@ function humanity_adjust(scale) {
     if (humanity_active) {
         let move = getRandomInt(7);
         const current_level = parseInt(humanity_level.style.width);
+        let recenter = false;
         switch (scale) {
             case 's':
                 // +- 10 units
-                break;
+                humanity_nudge_cycle += 1;
+                if (humanity_nudge_cycle > 5 && Math.random() > 0.7) {
+                    recenter = true;
+                    humanity_nudge_cycle = 0;
+                    console.log('get moved');
+                } else {
+                    break;
+                }
+                // YES I WANT THE FALLTHROUGH SHUT UP WEBSTORM - why did that work lol
             case 'm':
                 // 7s because it'll be less... round looking.
                 // +- 10-27 units
@@ -536,10 +542,10 @@ function humanity_adjust(scale) {
             case 'l':
                 // +- 37-47 units
                 move += 31;
+                recenter = true;
                 break;
         }
-        // something something lock it and reverse it
-        if (Math.random() > 0.5 || (scale === 'l' && current_level > 50)) {
+        if ((recenter && current_level > 50) || Math.random() > 0.5) {
             move = -move;
         }
 
@@ -547,13 +553,14 @@ function humanity_adjust(scale) {
 
         requestAnimationFrame(() => {
             humanity_level.style.width = move + '%';
+            humanity_robot.classList.remove('alert');
+            humanity_human.classList.remove('alert');
+            void humanity_human.offsetWidth;
+            void humanity_robot.offsetWidth;
             if (move > 70) {
                 humanity_robot.classList.add('alert');
             } else if (move < 25) {
                 humanity_human.classList.add('alert');
-            } else {
-                humanity_robot.classList.remove('alert');
-                humanity_human.classList.remove('alert');
             }
         });
     }
@@ -573,6 +580,44 @@ function button_flash(elem) {
     elem.style.animation = 'var(--button-flash-animation-params)';
 }
 
+function register_info() {
+    const info_button = document.getElementById('control-1');
+    const info_items = document.getElementsByClassName('info-panel');
+    const id_items = document.getElementsByClassName('container-id');
+    let info_on = false;
+    info_button.addEventListener('click', (event) => {
+        requestAnimationFrame(() => {
+            // good news, you literally can't click the info button if info is up
+            // I'm thinking no animation. It's gonna get covered instantly.
+            for (const item of info_items) {
+                item.classList.add('active');
+            }
+            for (const item of id_items) {
+                item.classList.add('active');
+                item.style.animation = 'none'; // https://youtu.be/0Wtcn_MkKL8
+            }
+            clickEater.classList.add('active', 'info');
+            info_on = true;
+        });
+    });
+
+    clickEater.addEventListener('click', (event) => {
+        // clicked somewhere else
+        if (info_on) {
+            requestAnimationFrame(() => {
+                clickEater.classList.remove('active', 'info');
+                for (const item of info_items) {
+                    item.classList.remove('active');
+                }
+                for (const item of id_items) {
+                item.classList.remove('active');
+            }
+                info_on = false;
+            });
+        }
+    });
+}
+
 /**
  * Inject button control logic, etc
  */
@@ -584,7 +629,7 @@ function inject_controls() {
 
     register_quit();
 
-    //register_info();
+    register_info();
 
     register_humanity();
 
@@ -705,7 +750,7 @@ function render_puzzle() {
         }
     });
 
-    text_dump.innerText += `soln: ${moves}`;
+    text_dump.innerText += `${moves}`;
 }
 
 /*

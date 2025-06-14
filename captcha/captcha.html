@@ -2,624 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Joel</title>
+  <title>Jlorp</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-
-  <style>
-    html,
-    body {
-      margin: 0;
-      padding: 0;
-      font-family: sans-serif;
-    }
-
-    :root {
-      --highlighted-opacity: 0.3;
-      --lowlighted-opacity: 0.3;
-      --hover-opacity: 0.3;
-      --horz-padding: 2px; /* the last damn thing I can't make relative I hate you */
-      --nice-red: #ff3030;
-      --nice-red-rgb: 255, 48, 48;
-      /* well I like that red I made so... surely the green version is nice? */
-      /* ...actually it's not bad. a bit saturated. */
-      --nice-green: #30ff30;
-      --nice-green-rgb: 48, 255, 48;
-      /* tbh I think it looks best when tile-overlay is applying a highlight */
-      --nicer-red: #f17e78;
-      --nicer-green: #7ef178;
-
-      --button-flash-animation-params: flashBrightness 0.1s linear forwards;
-      --id-flash-animation-params: idFlash 0.8s linear forwards;
-      --jump-animation-params: jump 1.5s linear forwards infinite;
-    }
-
-    #captcha-container {
-      background: white;
-      width: 390px;
-      height: 300px;
-      display: grid;
-      /* 8px is PERFECT at 390x300. I wish I could do an fr that good it's 2/75ths and that's .0266666... */
-      /* ...pixels are like fractional units if you think about it, or maybe if you don't */
-      grid-template-columns: 230fr 8fr 152fr;
-      overflow: hidden;
-    }
-
-    /* I'm still in a dream */
-    #click-eater {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      z-index: 20;
-
-      opacity: 0;
-      cursor: pointer;
-      user-select: none;
-
-      pointer-events: none;
-      visibility: hidden;
-      /*  changes to pointer-events kills animations so you have to trick it with visibility */
-      transition: opacity 0.3s ease, background-color 0.3s ease, visibility 0s 0.3s;
-    }
-    #click-eater.active {
-      opacity: 1;
-      pointer-events: auto;
-      visibility: visible;
-      transition: opacity 0.3s ease, background-color 0.3s ease, visibility 0s;
-    }
-    #click-eater.reset {
-      background-color: rgba(0,0,0,0.5);
-    }
-
-    #left-container,
-    #right-container {
-      display: flex;
-      flex-direction: column;
-      height: 100%;
-      width: 100%;
-    }
-
-    .vertical-divider {
-      height: 100%;
-      background: lightgray;
-    }
-    .horizontal-divider {
-      height: var(--horz-padding);
-      width: 100%;
-      background: lightgray;
-      flex-shrink: 0;
-      box-sizing: border-box;
-    }
-
-    #dynamic-top-left,
-    #dynamic-top-right {
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      flex-shrink: 0;
-      flex-grow: 0;
-      flex-basis: auto;
-      width: 100%;
-    }
-
-    /* No, I don't entirely understand this, I just add things to it. why do you ask? */
-    #captcha-container > div,
-    #left-container > div,
-    #right-container > div,
-    #addon-container > div,
-    #dynamic-top-left,
-    #dynamic-top-right,
-    #puzzle-holder,
-    #solution-holder,
-    #control-holder > *,
-    .tile-base,
-    .puzzle-tile,
-    .control-tile {
-      min-height: 0;
-      min-width: 0;
-    }
-
-    #puzzle-holder,
-    #solution-holder,
-    #addon-holder {
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      flex-shrink: 0;
-      flex-grow: 0;
-      flex-basis: auto;
-      box-sizing: border-box;
-      width: 100%;
-      position: relative;
-    }
-
-    #control-holder {
-      display: flex;
-      flex-direction: column;
-      flex-grow: 1;
-      flex-basis: 0;
-      width: 100%;
-      box-sizing: border-box;
-      min-height: 0;
-      position: relative;
-    }
-
-    #puzzle-container,
-    #solution-container,
-    #control-container,
-    #addon-container {
-      display: grid;
-      gap: 0;
-      box-sizing: border-box;
-      width: 100%;
-      min-height: 0;
-      min-width: 0;
-    }
-
-    #puzzle-container,
-    #solution-container {
-      aspect-ratio: 1;
-    }
-
-    #control-container {
-      position: relative;
-      grid-template-rows: repeat(3, 1fr);
-      grid-template-columns: repeat(3, 1fr);
-      flex-grow: 1;
-      flex-shrink: 1;
-      flex-basis: 0;
-      background-color: #D3D3D3;
-    }
-
-    #solution-preview img {
-      max-width: 100%;
-      max-height: 100%;
-      object-fit: contain;
-    }
-
-    .tile-base {
-      position: relative;
-      width: 100%;
-      height: 100%;
-      /* cursor: pointer;  not for blank tiles, move to overlay */
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      box-sizing: border-box;
-    }
-
-    .puzzle-tile,
-    .control-tile,
-    .tile-overlay {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      box-sizing: border-box;
-      user-select: none;
-      aspect-ratio: 1;
-      height: 100%;
-      min-height: 0;
-      width: 100%;
-
-      /* tbh I have no idea what this is going to do yet*/
-      transition: transform 0.3s ease-out;
-    }
-
-    .control-tile {
-      aspect-ratio: unset;
-    }
-
-    .active-tile {
-      outline: #666 groove 3px;
-      outline-offset: -3px;
-    }
-
-    /*
-    idk!
-    .active-tile {
-      border: var(--active-border-width) var(--active-border-style) var(--active-border-color);
-    }
-    */
-
-    .puzzle-tile svg,
-    .control-tile svg,
-    .tile-overlay svg,
-    #addon-humanity svg {
-      display: block;
-      max-width: 80%;
-      max-height: 80%;
-      aspect-ratio: 1;
-      /*box-sizing: border-box;
-      border: 1px dashed orange;*/
-      object-fit: contain;
-      pointer-events: none;
-    }
-
-    .tile-base .tile-overlay {
-      position: absolute;
-      top: 0;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      background: #000000;
-      cursor: pointer;
-      z-index: 10;
-
-      transition: opacity 0.3s ease, transform 0.3s ease, background-color 0.3s ease, width 0.3s ease-in-out;
-
-      --current-base-opacity: 0;
-      opacity: var(--current-base-opacity);
-    }
-
-    .control-tile .tile-overlay {
-      background: white;
-    }
-
-    /*.tile-overlay > svg {
-      opacity: 0;
-      max-width: unset;
-      max-height: unset;
-      transition: opacity 0.3s ease;
-    }
-    .tile-overlay.active-tile > svg {
-      opacity: 1;
-    }*/
-
-    .tile-base .tile-overlay.highlighted {
-      background: white;
-      --current-base-opacity: var(--highlighted-opacity);
-    }
-
-    .tile-base .lowlighted {
-      background: black;
-      --current-base-opacity: var(--lowlighted-opacity);
-    }
-
-    .tile-base:hover .tile-overlay {
-      opacity: calc(var(--current-base-opacity) + var(--hover-opacity));
-    }
-
-    #control-container {
-      fill: black;
-    }
-    #control-1 svg,
-    #control-7 svg,
-    #control-9 svg {
-      height: 65%;
-      width: 65%;
-    }
-
-    #control-3,
-    #control-7 {
-      fill: var(--nice-red);
-    }
-    #control-3 .tile-overlay,
-    #control-7 .tile-overlay {
-      z-index: 12;
-    }
-    #control-3 .tile-overlay {
-      right: 0;
-      left: auto;
-      width: 100%;
-    }
-    #control-7 .tile-overlay {
-      left: 0;
-      right: auto;
-      width: 100%;
-    }
-    #control-3.active svg,
-    #control-7.active svg,
-    #control-3.active .tile-overlay,
-    #control-7.active .tile-overlay,
-    #control-3.active .control-tile,
-    #control-7.active .control-tile {
-      z-index: 30;
-    }
-    #control-3.active .control-tile,
-    #control-7.active .control-tile {
-      background: var(--nice-red);
-      fill: white;
-    }
-    #control-3.active .tile-overlay,
-    #control-7.active .tile-overlay {
-      width: 300%;
-    }
-    /* UGH THIS IS SO BUSTED> I can't get it to transition back to 0 deg after deactivating without snapping*/
-    #control-3 svg {
-      transform-origin: center;
-      animation: rotateSvg 2s linear infinite paused;
-    }
-    #control-3.active svg {
-      animation-play-state: running;
-    }
-    @keyframes rotateSvg {
-      from {
-        transform: rotate(0deg);
-      }
-      to {
-        transform: rotate(360deg);
-      }
-    }
-
-    #reset-confirm,
-    #quit-confirm {
-      position: absolute;
-      visibility: hidden;
-      background-color: var(--nice-red);
-      color: white;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      user-select : none;
-      height: 100%;
-      width: 0;
-      overflow: hidden;
-
-      /* important for quit because 8 and 9 have higher z because they're later? */
-      z-index: 11;
-
-      /*opacity: 0;*/
-      pointer-events: none;
-      transition: background-color 0.3s ease, opacity 0.3s ease, width 0.3s ease-in-out, visibility 0s 0.3s;
-    }
-    #reset-confirm {
-      right: 100%;
-    }
-    #quit-confirm {
-      left: 100%;
-    }
-    #reset-confirm.active,
-    #quit-confirm.active {
-      visibility: visible;
-      pointer-events: auto;
-      z-index: 29;
-      background: var(--nice-red);
-      width: 200%;
-      transition: background-color 0.3s ease, opacity 0.3s ease, width 0.3s ease-in-out, visibility 0s;
-    }
-    #reset-confirm span {
-      white-space: nowrap;
-      transition: right 0.3s ease-in-out;
-      text-align: center;
-      width: 100%;
-      right: -100%;
-      left: 0;
-    }
-    #quit-confirm span {
-      white-space: nowrap;
-      transition: left 0.3s ease-in-out;
-      text-align: center;
-      width: 100%;
-      left: -100%;
-      right: 0;
-    }
-    #reset-confirm.active span {
-      left: 0;
-    }
-    #quit-confirm.active span {
-      left: 0;
-    }
-
-    #control-9 svg {
-      transition: transform 0.3s ease;
-    }
-    #control-9.active svg {
-      transform: scale(-1, 1);
-    }
-
-    #control-1 svg,
-    #control-2 svg,
-    #control-4 svg,
-    #control-6 svg,
-    #control-8 svg {
-      animation: var(--button-flash-animation-params) paused;
-    }
-    @keyframes flashBrightness {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.3 }
-    }
-
-    #control-7 svg {
-      animation: var(--jump-animation-params) paused;
-    }
-    #control-7.active svg {
-      animation-play-state: running;
-    }
-
-    @keyframes jump {
-      0%, 100% { transform: translateY(0); }
-      10% { transform: translateY(-12%); }
-      90% { transform: translateY(12%); }
-    }
-    .info {
-      opacity: 0;
-    }
-    .container-id {
-      aspect-ratio: 1;
-      position: absolute;
-      bottom: 0;
-      right: 0;
-      max-width: 50%;
-      max-height: 50%;
-      opacity: 0;
-      pointer-events: none;
-
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      z-index: 15;
-      background: black;
-      border-radius: 0.5em;
-    }
-    .container-id.active {
-      opacity: 1;
-      background: unset;
-    }
-    .container-id svg {
-      width: 80%;
-      height: 80%;
-      fill: white;
-    }
-
-    #puzzle-holder .container-id,
-    #solution-holder .container-id {
-      width: 25%;
-      height: 25%;
-      animation: var(--id-flash-animation-params) paused;
-    }
-    @keyframes idFlash {
-      0%, 100% { opacity: 0; } /* lmao you wanna be like this on first load then get owned */
-      1%, 20% { opacity: 0.8; }
-    }
-
-
-
-
-
-    /* Idk why I need gro all over I hate this so much */
-    #addon-holder {
-      flex-grow: 1;
-      background: aqua;
-    }
-
-    #addon-container {
-      grid-template-rows: 1fr 2fr;
-      flex-grow: 1;
-    }
-
-    /* probably toss this div eventually, god forbid it's load bearing */
-    #addon-upper {
-      background: lightgray;
-    }
-
-    #addon-humanity {
-      display: flex;
-      flex-direction: row;
-
-      width: 100%;
-      height: 100%;
-      box-sizing: border-box;
-      /*justify-content: center;*/
-      justify-content: center;
-      gap: 5%;
-      align-items: center;
-
-      padding-left: 4%;
-      padding-right: 4%;
-    }
-
-    /* what do you MEAN browsers control progress bar objects too hard to style */
-
-    .progress-fill {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 0;
-      height: 100%;
-      background: var(--nice-red);
-    }
-    .progress-track {
-      position: relative;
-      flex-grow: 1;
-      flex-shrink: 1;
-      flex-basis: 0;
-
-      height: 60%;
-
-      background: var(--nice-green);
-      overflow: hidden;
-      border-radius: 0.5em;
-    }
-
-    #humanity {
-      /* JS CANT READ THIS AAA
-      width: 50%;
-      */
-      transition: width 1s ease-in-out;
-      /* I really wanted to animate the right edge, like make it wiggle, but I just can't */
-    }
-
-    #addon-humanity > .tile-base {
-      flex-grow: 0;
-      flex-basis: min-content;
-      aspect-ratio: 1;
-      overflow: hidden;
-      border-radius: 50%;
-      animation: humanityAlert 0.8s linear infinite paused;
-    }
-    #human-tile {
-      --flash-color-transparent: rgba(var(--nice-green-rgb), 0);
-      --flash-color-opaque: rgba(var(--nice-green-rgb), 0.8);
-      background-color: var(--flash-color-transparent);
-    }
-    #human-tile.alert {
-      animation-play-state: running;
-    }
-    #human {
-      fill: black;
-    }
-    #robot-tile {
-      --flash-color-transparent: rgba(var(--nice-red-rgb), 0);
-      --flash-color-opaque: rgba(var(--nice-red-rgb), 0.8);
-      background-color: var(--flash-color-transparent);
-    }
-    #robot-tile.alert {
-      animation-play-state: running;
-    }
-    #robot {
-      fill: black;
-    }
-    @keyframes humanityAlert {
-      0%, 80% { background-color: var(--flash-color-transparent); }
-      10%, 20% { background-color: var(--flash-color-opaque); }
-    }
-
-    #addon-lower {
-      display: grid;
-      grid-template-columns: 2fr 1fr;
-      width: 100%;
-    }
-    #addon-moves {
-      background: green;
-    }
-    #addon-timer {
-      background: blue;
-    }
-
-
-    /*#control-container {
-      background: linear-gradient(to bottom, #f0f0f0, #e0e0e0);
-    }*/
-    /*
-    #control-container {
-      background-color: #f5f5f5;
-      background-image: radial-gradient(#e0e0e0 2px, transparent 2px);
-      background-size: 8px 8px;
-    }
-
-    .control-tile,
-    .control-tile .tile-overlay {
-      border: 1px solid #ddd;
-      !*
-      aahh it needs fixing wrt confirms
-      border-left-color: transparent;
-      *!
-      border-radius: 4px;
-      box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
-    }
-
-    .control-tile:hover {
-      background-color: #f5f5f5;
-      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-      transform: translateY(-1px);
-      transition: all 0.2s ease-out;
-    }*/
-
-
-  </style>
+  <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
@@ -629,13 +14,20 @@
       <div id="puzzle-holder"><div id="puzzle-container"></div>
         <!-- little id popup for when we flip, tragically not shareable with help overlay? -->
         <div class="container-id"><svg><use xlink:href="bootstrap-icons.svg#grid-3x3"/></svg></div>
+        <div class="info-panel">
+          <div class="info-body"></div>
+        </div>
       </div>
     </div>
-    <div class="horizontal-divider"></div>
+
     <!--<div id="upper-spacer"></div>-->
-    <!-- Shall I construct a div to hold the regards? -->
+    <!-- Shall I construct a maze to hold the div? -->
     <div id="addon-holder">
       <div id="addon-container">
+        <div id="addon-progress">
+          <div class="tile-base"><svg><use xlink:href="bootstrap-icons.svg#triangle-fill"/></svg></div>
+          <div class="tile-base"><svg><use xlink:href="bootstrap-icons.svg#triangle-fill"/></svg></div>
+        </div>
         <div id="addon-upper">
           <div id="addon-humanity">
             <div class="tile-base" id="robot-tile"><svg id="robot"><use xlink:href="bootstrap-icons.svg#robot"/></svg></div>
@@ -645,14 +37,20 @@
           </div>
         </div>
         <div id="addon-lower">
-          <div id="addon-moves"></div>
           <div id="addon-timer"></div>
+          <div id="addon-moves">
+            <div class="tile-base"><svg><use xlink:href="bootstrap-icons.svg#activity"/></svg></div>
+            <div id="aa"></div>
+            <div class="tile-base">
+              <svg><use xlink:href="bootstrap-icons.svg#infinity"/></svg>
+            </div>
+          </div>
         </div>
 
       </div>
       <div id="affirmations" hidden>UGH FIGURE THIS OUT LATER</div>
       <div class="container-id"><svg><use xlink:href="bootstrap-icons.svg#heart-pulse"/></svg></div>
-      <div class="info" hidden> problem for later</div>
+      <div class="info-panel"><p>aaa</p></div>
     </div>
     <!-- person svg ====== robot svg have it swing percentages across the bar semi-arbitrarily. Also on click-->
     <!-- Timer that just goes up and gets red human-robot bar constantly drains and only goes up on puzzle move? -->
@@ -663,7 +61,7 @@
     <div id="dynamic-top-right">
       <div id="solution-holder"><div id="solution-container"></div>
         <div class="container-id"><svg><use xlink:href="bootstrap-icons.svg#image"/></svg></div>
-        <div class="info"></div>
+        <div class="info-panel"><p>aaa</p></div>
       </div>
       <!-- record record-fill for progress stop stop-fill or triangle triangle-fill triangle-half, or diamond-xx-->
     </div>
@@ -731,10 +129,10 @@
           </div> <!-- reset, flip text/symbol on click to a confirm -->
         </div>
       <div class="container-id"><svg><use xlink:href="bootstrap-icons.svg#dpad"/></svg></div>
+      <div class="info-panel"><p>aaa</p></div>
     </div>
   </div>
   <div id="click-eater"></div>
-
 </div>
 
   <script type="text/javascript" src="main.js"></script>
