@@ -1,3 +1,197 @@
+
+// does this map make my state look big?
+//  also idk what this type is oh no help
+const uiState = {
+    global: 'info', // info -> start -> load -> play -> (start/fail(/reset?)) -> (load/exit)
+    quit: 'start', // start, off, waiting
+    reset: 'off', // off, waiting
+    info: true,
+    do_flip: false,
+    puzzleid: 0
+};
+
+let frameScheduled = false;
+function scheduleRender() {
+    if (!frameScheduled) {
+        frameScheduled = true;
+        requestAnimationFrame(renderQueue);
+    }
+}
+
+function renderQueue() {
+    // calling all of them every time I need a frame hurts me. It hurts.
+    //  I don't want to be part of the problem!!!
+    renderInfo();
+    quitRender();
+    resetRender();
+    flipRender();
+    frameScheduled = false;
+}
+
+function quitRender() {
+    const quit_button = document.getElementById('control-7');
+    const quit_slider = document.getElementById('quit-confirm');
+    const span = quit_slider.getElementsByTagName('span')[0];
+    const svg = quit_button.querySelector('svg use');
+    // no I'm not checking my variables, if my buttons fell off the page I can't help you.
+
+    switch (uiState.quit) {
+        // we just reuse the reset state for click eater
+        case 'start':
+            quit_button.classList.add('start');
+            quit_slider.classList.add('start');
+            if (uiState.puzzleid === 0) {
+                span.innerText = 'Click to begin';
+            } else {
+                span.innerText = 'Next';
+            }
+            // svg.setAttribute('xlink:href', 'bootstrap-icons.svg#play');
+            if (uiState.global !== 'info') {
+                quit_button.classList.add('active');
+                quit_slider.classList.add('active');
+                clickEater.classList.add('active', 'reset');
+            }
+            break;
+        case 'off':
+            quit_button.classList.remove('active', 'start');
+            quit_slider.classList.remove('active', 'start');
+            // FIXME: this will immediately reset on first click, need intermediary state?
+            quit_slider.firstElementChild.innerText = 'New puzzle?';
+            break;
+        case 'waiting':
+            quit_button.classList.add('active');
+            quit_slider.classList.add('active');
+            clickEater.classList.add('active', 'reset');
+            // TECHNICALLY... a violation of the state machine could end us here
+            // svg.setAttribute('xlink:href', 'bootstrap-icons.svg#eject');
+            break;
+    }
+}
+
+function resetRender() {
+    const reset_button = document.getElementById('control-3');
+    const reset_slider = document.getElementById('reset-confirm');
+    const svg = reset_button.querySelector('svg use');
+    // no I'm not checking my variables, if my buttons fell off the page I can't help you.
+
+    switch (uiState.reset) {
+        case 'off':
+            reset_button.classList.remove('active');
+            reset_slider.classList.remove('active');
+            break;
+        case 'waiting':
+            reset_button.classList.add('active');
+            reset_slider.classList.add('active');
+            clickEater.classList.add('active', 'reset');
+            break;
+    }
+}
+
+function register_quit() {
+    const quit_button = document.getElementById('control-7');
+
+    quit_button.addEventListener('click', (event) => {
+        event.stopPropagation(); // ?? who else could have this event
+        switch (uiState.quit) {
+            case 'start':
+                // TODO: game start, wreck up the place
+                uiState.quit = 'off';
+                // TODO: (semi-)fake loading/generation screen
+                uiState.global = 'load';
+                break;
+            case 'off':
+                uiState.quit = 'waiting';
+                break;
+            case 'waiting':
+                // requested new puzzle, wreck up the place or get annoying
+                // TODO: reset/nag hook
+                uiState.quit = 'off';
+        }
+        scheduleRender();
+    });
+
+    clickEater.addEventListener('click', (event) => {
+        event.stopPropagation(); // the click can fall through?? this doesn't seem right at all tbh.
+        // clicked somewhere else
+        if (uiState.quit === 'waiting') {
+            uiState.quit = 'off';
+            scheduleRender();
+        }
+    });
+}
+
+function register_reset() {
+    const reset_button = document.getElementById('control-3');
+
+    reset_button.addEventListener('click', (event) => {
+        event.stopPropagation(); // ?? who else could have this event
+        switch (uiState.reset) {
+            case 'off':
+                uiState.reset = 'waiting';
+                break;
+            case 'waiting':
+                // TODO: reset state handler
+                uiState.reset = 'off';
+                break;
+        }
+        scheduleRender();
+    });
+
+    clickEater.addEventListener('click', (event) => {
+        // event.stopPropagation(); // the click can fall through?? this doesn't seem right at all tbh.
+        // actually that seems bad I have like 5 listeners for this object.
+
+        // clicked somewhere else
+        if (uiState.reset === 'waiting') {
+            uiState.reset = 'off';
+            scheduleRender();
+        }
+    });
+}
+
+function flipRender() {
+    // no, I will not be naming these consistently, thank you.
+    if (uiState.do_flip) {
+        const flip_button = document.getElementById('control-9');
+        const svg_element = flip_button.getElementsByTagName('svg')[0];
+
+        const dyn_left = document.getElementById('dynamic-top-left');
+        const puzzle_holder = document.getElementById('puzzle-holder');
+        const dyn_right = document.getElementById('dynamic-top-right');
+        const solution_holder = document.getElementById('solution-holder');
+
+        const soln_id = solution_holder.getElementsByClassName('container-id')[0];
+        const puzzle_id = puzzle_holder.getElementsByClassName('container-id')[0];
+
+        soln_id.style.animation = 'none';
+        puzzle_id.style.animation = 'none';
+        void soln_id.offsetHeight; // this forces things to recalculate so the animation reapplies
+        void puzzle_id.offsetHeight;
+        soln_id.style.animation = 'var(--id-flash-animation-params)';
+        puzzle_id.style.animation = 'var(--id-flash-animation-params)';
+
+        if (!flip_button.classList.contains('active')) {
+            dyn_left.appendChild(solution_holder);
+            dyn_right.appendChild(puzzle_holder);
+            flip_button.classList.add('active');
+        } else {
+            dyn_left.appendChild(puzzle_holder);
+            dyn_right.appendChild(solution_holder);
+            flip_button.classList.remove('active');
+        }
+        uiState.do_flip = false;
+    }
+}
+
+function register_flipper() {
+    const flip_button = document.getElementById('control-9');
+    flip_button.addEventListener('click', (event) => {
+        event.stopPropagation(); // ??
+        uiState.do_flip = true;
+        scheduleRender();
+    });
+}
+
 /**
  * Construct puzzle initial state
  * @param {number} size - puzzle size, NxN
@@ -389,121 +583,6 @@ const clickEater = document.getElementById('click-eater');
 
 const text_dump = document.getElementById('aa');
 
-function register_flipper() {
-    const flip_button = document.getElementById('control-9');
-    const svg_element = flip_button.getElementsByTagName('svg')[0];
-
-    const dyn_left = document.getElementById('dynamic-top-left');
-    const puzzle_holder = document.getElementById('puzzle-holder');
-    const dyn_right = document.getElementById('dynamic-top-right');
-    const solution_holder = document.getElementById('solution-holder');
-
-    const soln_id = solution_holder.getElementsByClassName('container-id')[0];
-    const puzzle_id = puzzle_holder.getElementsByClassName('container-id')[0];
-
-    flip_button.addEventListener('click', (event) => {
-        requestAnimationFrame(() => {
-
-            soln_id.style.animation = 'none';
-            puzzle_id.style.animation = 'none';
-            void soln_id.offsetHeight; // this forces things to recalculate so the animation reapplies
-            void puzzle_id.offsetHeight;
-            soln_id.style.animation = 'var(--id-flash-animation-params)';
-            puzzle_id.style.animation = 'var(--id-flash-animation-params)';
-
-            if (!flip_button.classList.contains('active')) {
-                dyn_left.appendChild(solution_holder);
-                dyn_right.appendChild(puzzle_holder);
-                flip_button.classList.add('active');
-            } else {
-                dyn_left.appendChild(puzzle_holder);
-                dyn_right.appendChild(solution_holder);
-                flip_button.classList.remove('active');
-            }
-        });
-    });
-}
-
-function register_reset() {
-    const reset_button = document.getElementById('control-3');
-    //const overlay = reset_button.getElementsByClassName('tile-overlay')[0];
-    const reset_slider = document.getElementById('reset-confirm');
-    let waiting_for_confirm = false;
-
-
-    reset_button.addEventListener('click', (event) => {
-        event.stopPropagation();
-        requestAnimationFrame(() => {
-            if (waiting_for_confirm) {
-                // confirmed, wreck up the place
-                // eventually. Probably render a temp overlay
-                clickEater.classList.remove('active', 'reset');
-                reset_button.classList.remove('active');
-                reset_slider.classList.remove('active');
-                waiting_for_confirm = false;
-            } else {
-                // ...I guess if you resized we should do this dynamically, not just once
-                //const container_rect = controlContainer.getBoundingClientRect();
-
-                reset_slider.classList.add('active');
-                clickEater.classList.add('active', 'reset');
-                reset_button.classList.add('active');
-                waiting_for_confirm = true;
-            }
-        });
-    });
-
-    clickEater.addEventListener('click', (event) => {
-        // clicked somewhere else
-        if (waiting_for_confirm) {
-            requestAnimationFrame(() => {
-                clickEater.classList.remove('active', 'reset');
-                reset_button.classList.remove('active');
-                reset_slider.classList.remove('active');
-                waiting_for_confirm = false;
-            });
-        }
-    });
-}
-
-function register_quit() {
-    const quit_button = document.getElementById('control-7');
-    //const overlay = reset_button.getElementsByClassName('tile-overlay')[0];
-    const quit_slider = document.getElementById('quit-confirm');
-    let waiting_for_confirm = false;
-
-
-    quit_button.addEventListener('click', (event) => {
-        event.stopPropagation();
-        requestAnimationFrame(() => {
-            if (waiting_for_confirm) {
-                // confirmed, wreck up the place
-                // eventually. Probably render a temp overlay
-                clickEater.classList.remove('active', 'reset');
-                quit_button.classList.remove('active');
-                quit_slider.classList.remove('active');
-                waiting_for_confirm = false;
-            } else {
-                quit_slider.classList.add('active');
-                clickEater.classList.add('active', 'reset');
-                quit_button.classList.add('active');
-                waiting_for_confirm = true;
-            }
-        });
-    });
-
-    clickEater.addEventListener('click', (event) => {
-        // clicked somewhere else
-        if (waiting_for_confirm) {
-            requestAnimationFrame(() => {
-                clickEater.classList.remove('active', 'quit');
-                quit_button.classList.remove('active');
-                quit_slider.classList.remove('active');
-                waiting_for_confirm = false;
-            });
-        }
-    });
-}
 
 let humanity_active = true;
 let humanity_nudge_cycle = 0;
@@ -567,6 +646,7 @@ function humanity_adjust(scale) {
 }
 function register_humanity() {
     humanity_level.style.width = '50%';
+    // FIXME: setup variable callback chain
     setInterval(() => {humanity_adjust('s')}, 3000)
 }
 
@@ -580,40 +660,46 @@ function button_flash(elem) {
     elem.style.animation = 'var(--button-flash-animation-params)';
 }
 
-function register_info() {
-    const info_button = document.getElementById('control-1');
+function renderInfo() {
     const info_items = document.getElementsByClassName('info-panel');
     const id_items = document.getElementsByClassName('container-id');
-    let info_on = false;
+
+    if (uiState.info) {
+        for (const item of info_items) {
+            item.classList.add('active');
+        }
+        for (const item of id_items) {
+            item.classList.add('active');
+            item.style.animation = 'none'; // https://youtu.be/0Wtcn_MkKL8
+        }
+        clickEater.classList.add('active', 'info');
+    } else {
+        clickEater.classList.remove('active', 'info');
+        for (const item of info_items) {
+            item.classList.remove('active');
+        }
+        for (const item of id_items) {
+            item.classList.remove('active');
+        }
+    }
+}
+
+function register_info() {
+    const info_button = document.getElementById('control-1');
     info_button.addEventListener('click', (event) => {
-        requestAnimationFrame(() => {
-            // good news, you literally can't click the info button if info is up
-            // I'm thinking no animation. It's gonna get covered instantly.
-            for (const item of info_items) {
-                item.classList.add('active');
-            }
-            for (const item of id_items) {
-                item.classList.add('active');
-                item.style.animation = 'none'; // https://youtu.be/0Wtcn_MkKL8
-            }
-            clickEater.classList.add('active', 'info');
-            info_on = true;
-        });
+        event.stopPropagation(); // ?? who else could have this event
+        uiState.info = true;
+        scheduleRender();
     });
 
     clickEater.addEventListener('click', (event) => {
-        // clicked somewhere else
-        if (info_on) {
-            requestAnimationFrame(() => {
-                clickEater.classList.remove('active', 'info');
-                for (const item of info_items) {
-                    item.classList.remove('active');
-                }
-                for (const item of id_items) {
-                item.classList.remove('active');
+        if (uiState.info) {
+            uiState.info = false;
+            // WHOOPS, we need to stansition state from init info to... Whatever is next. Start I guess,
+            if (uiState.global === 'info') {
+                uiState.global = 'start';
             }
-                info_on = false;
-            });
+            scheduleRender();
         }
     });
 }
@@ -694,8 +780,6 @@ function inject_controls() {
         initialized = true; // idk what could call this multiple times but idk what would happen if you did
 
         register_info();
-        init_flow(); // pls mask some init div pop in ty
-        // OR NOT >:C we look so bad on DOM load with blank panels
 
         register_flipper();
 
@@ -752,8 +836,6 @@ function tile_clicked(event) {
             //overlay.style.outlineColor = color;
             // event.target.style.setProperty('--active-outline-color', color);
             event.target.classList.add('active-tile');
-
-
         });
     }
 }

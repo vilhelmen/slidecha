@@ -24,6 +24,7 @@ body {
     --button-flash-animation-params: flashBrightness 0.1s linear forwards;
     --id-flash-animation-params: idFlash 0.8s linear forwards;
     --jump-animation-params: jump 1.5s linear forwards infinite;
+    --jump2-animation-params: jump2 1.5s linear forwards infinite;
 }
 
 #captcha-container {
@@ -299,6 +300,10 @@ idk!
 #control-7 {
     fill: var(--nice-red);
 }
+#control-7.start {
+    background-color: var(--nicer-green);
+    fill: white;
+}
 
 #control-3 .tile-overlay,
 #control-7 .tile-overlay {
@@ -392,8 +397,10 @@ idk!
     width: 200%;
     transition: background-color 0.3s ease, opacity 0.3s ease, width 0.3s ease-in-out, visibility 0s;
 }
-#quit-confirm.init {
-    background-color: var(--nice-green) !important;
+#quit-confirm.start,
+#control-7.start.active .control-tile {
+    background-color: var(--nicer-green) !important;
+    color: white !important;
 }
 
 #reset-confirm span {
@@ -443,18 +450,37 @@ idk!
     50% {opacity: 0.3}
 }
 
-#control-7 svg {
+#quit-icon {
     animation: var(--jump-animation-params) paused;
 }
+#play-icon {
+    /* ugh whatever just make another */
+    animation: var(--jump2-animation-params) paused;
+}
 
-#control-7.active svg {
+#control-7.start #quit-icon {
+    display: none;
+}
+#control-7:not(.start) #play-icon {
+    display: none;
+}
+
+#control-7.active:not(.start) #quit-icon,
+#control-7.start.active #play-icon {
     animation-play-state: running;
 }
+
 
 @keyframes jump {
     0%, 100% {transform: translateY(0);}
     8% {transform: translateY(-12%);}
     90% {transform: translateY(12%);}
+}
+/* I'M TOO STUPID!! */
+@keyframes jump2 {
+    0%, 100% {transform: translateX(0);}
+    8% {transform: translateX(12%);}
+    90% {transform: translateX(-12%);}
 }
 
 .info-panel {

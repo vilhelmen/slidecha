@@ -114,9 +114,11 @@
               <div class="tile-overlay"></div>
             </div>
           </div>
-          <div class="tile-base" id="control-7">
+          <div class="tile-base start" id="control-7">
             <div class="control-tile">
-              <svg><use xlink:href="bootstrap-icons.svg#eject"/></svg>
+              <!-- TODO: svg div or something idk -->
+              <svg id="quit-icon"><use xlink:href="bootstrap-icons.svg#eject"/></svg>
+              <svg id="play-icon"><use xlink:href="bootstrap-icons.svg#play"/></svg>
               <div class="tile-overlay"></div>
               <div id="quit-confirm"><span>Try Again?</span></div>
             </div>
@@ -160,7 +162,8 @@
 
       inject_controls();
 
-      render_puzzle()
+      render_puzzle();
+      scheduleRender();
 
       // Your CAPTCHA code goes here, we've added a simple example below:
 
