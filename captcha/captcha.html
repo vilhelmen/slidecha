@@ -13,6 +13,8 @@
     <div id="dynamic-top-left">
       <div id="puzzle-holder">
         <div id="puzzle-container"></div>
+        <!-- overlay div I can slide fake tiles around on -->
+        <div id="slide-overlay"></div>
         <!-- little id popup for when we flip, tragically not shareable with help overlay? -->
         <div class="container-id"><svg><use xlink:href="bootstrap-icons.svg#grid-3x3"/></svg></div>
         <div class="info-panel">
@@ -33,9 +35,10 @@
         <div id="addon-progress"></div>
         <div id="addon-upper">
           <div id="addon-humanity">
-            <div class="tile-base" id="robot-tile"><svg id="robot"><use xlink:href="bootstrap-icons.svg#robot"/></svg></div>
-            <div class="progress-track"><div id="humanity" class="progress-fill"></div></div>
-            <div class="tile-base" id="human-tile"><svg id="human"><use xlink:href="bootstrap-icons.svg#person-arms-up"/></svg></div>
+            <!-- I can't believe I'm optimizing this little... ANYWAY this damn blinker is makinging my mac burn my fingertops -->
+            <div class="tile-base" id="robot-tile"><div class="blinker"></div><svg id="robot"><use xlink:href="bootstrap-icons.svg#robot"/></svg></div>
+            <div class="progress-track"><div id="humanity" class="progress-fill"></div><div></div></div>
+            <div class="tile-base" id="human-tile"><div class="blinker"></div><svg id="human"><use xlink:href="bootstrap-icons.svg#person-arms-up"/></svg></div>
             <!-- person-fill person-arms-up person-standing -->
           </div>
         </div>

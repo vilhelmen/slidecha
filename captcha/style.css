@@ -12,14 +12,13 @@ body {
     --hover-opacity: 0.3;
     --horz-padding: 0px; /* the last damn thing I can't make relative I hate you */
     --nice-red: #ff3030;
-    --nice-red-rgb: 255, 48, 48;
     /* well I like that red I made so... surely the green version is nice? */
     /* ...actually it's not bad. a bit saturated. */
     --nice-green: #30ff30;
-    --nice-green-rgb: 48, 255, 48;
     /* tbh I think it looks best when tile-overlay is applying a highlight */
     --nicer-red: #f17e78;
     --nicer-green: #7ef178;
+    --slide-timing: 0.3s;
 
     --button-flash-animation-params: flashBrightness 0.1s linear forwards;
     --id-flash-animation-params: idFlash 0.8s linear forwards;
@@ -50,6 +49,7 @@ body {
     opacity: 0;
     cursor: pointer;
     user-select: none;
+    background: transparent;
 
     pointer-events: none;
     visibility: hidden;
@@ -70,6 +70,12 @@ body {
 #click-eater.info {
     background-color: rgba(0, 0, 0, 0.8);
     backdrop-filter: blur(4px);
+}
+#click-eater.block {
+    visibility: visible;
+    /* ok so turns out setting this to none just means click through, not block */
+    pointer-events: auto;
+    cursor: unset;
 }
 
 #left-container,
@@ -302,7 +308,7 @@ idk!
 }
 #control-7.start {
     background-color: var(--nicer-green);
-    fill: white;
+    fill: #666;
 }
 
 #control-3 .tile-overlay,
@@ -400,7 +406,8 @@ idk!
 #quit-confirm.start,
 #control-7.start.active .control-tile {
     background-color: var(--nicer-green) !important;
-    color: white !important;
+    color: #666 !important;
+    fill: #666 !important;
 }
 
 #reset-confirm span {
@@ -590,6 +597,27 @@ p {
 }
 
 
+
+/* we need a place to put fake tiles to animate */
+#slide-overlay {
+    position: absolute;
+    top: 2px;
+    bottom: 2px;
+    left: 2px;
+    right: 2px;
+    overflow: hidden;
+    background: transparent;
+}
+
+#slide-overlay.active {
+    z-index: 18;
+    pointer-events: auto;
+}
+
+#slide-overlay .tile-base {
+    transition: transform var(--slide-timing) ease;
+}
+
 /* Idk why I need gro all over I hate this so much */
 #addon-holder {
     flex-grow: 1;
@@ -682,11 +710,20 @@ but lmao you can set it to 0fr which is way smarter and funny, which is the most
     position: absolute;
     top: 0;
     left: 0;
-    width: 50%; /* gotta, it looks bad on DOM load otherwise */
+    width: 100%; /* gotta for new reasons (not setting the cpu on fire) */
     height: 100%;
+    transform-origin: left center;
     background: var(--nice-red);
+}
 
-    border-right: 4px solid lightgray;
+.progress-fill::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 8px;
+    height: 100%;
+    background-color: lightgray;
 }
 
 .progress-track {
@@ -705,7 +742,7 @@ but lmao you can set it to 0fr which is way smarter and funny, which is the most
     /* JS CANT READ THIS AAA
     width: 50%;
     */
-    transition: width 1s ease-in-out;
+    transition: transform 1s ease-in-out;
     /* I really wanted to animate the right edge, like make it wiggle, but I just can't */
 }
 
@@ -714,35 +751,43 @@ but lmao you can set it to 0fr which is way smarter and funny, which is the most
     flex-basis: min-content;
     aspect-ratio: 1;
     overflow: hidden;
-    border-radius: 50%;
+    border-radius: 1em;
 }
 
-#human-tile {
+#human-tile,
+#robot-tile {
     fill: black;
-    --flash-color-transparent: rgba(var(--nice-green-rgb), 0);
-    --flash-color-opaque: rgba(var(--nice-green-rgb), 0.8);
-    background-color: var(--flash-color-transparent);
 }
 
-#human-tile.alert,
-#robot-tile.alert {
+#human-tile .blinker,
+#robot-tile .blinker {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+}
+
+#human-tile.alert .blinker,
+#robot-tile.alert .blinker {
     /* once again animations refuse to reset when active class is removed so get owned */
     animation: humanityAlert 0.8s linear infinite;
 }
+#human-tile .blinker {
+    background-color: var(--nice-green);
+}
 
-#robot-tile {
-    fill: black;
-    --flash-color-transparent: rgba(var(--nice-red-rgb), 0);
-    --flash-color-opaque: rgba(var(--nice-red-rgb), 0.8);
-    background-color: var(--flash-color-transparent);
+#robot-tile .blinker {
+    background-color: var(--nice-red);
 }
 
 @keyframes humanityAlert {
     0%, 80% {
-        background-color: var(--flash-color-transparent);
+        opacity: 0;
     }
     10%, 20% {
-        background-color: var(--flash-color-opaque);
+        opacity: 0.8;
     }
 }
 

@@ -7,7 +7,12 @@ const uiState = {
     reset: 'off', // off, waiting
     info: true,
     do_flip: false,
-    puzzleid: 0
+    puzzleid: 0,
+    progress_update: true,
+    humanity: 50,
+    tile_time: 0.1,
+    active_tile: [],
+    clicked_tile: []
 };
 
 let frameScheduled = false;
@@ -21,11 +26,17 @@ function scheduleRender() {
 function renderQueue() {
     // calling all of them every time I need a frame hurts me. It hurts.
     //  I don't want to be part of the problem!!!
+
+    // if it's at the top, we can render more than needed.
+    //  if it's at the bottom, we can render less than needed.
+    frameScheduled = false;
     renderInfo();
     quitRender();
     resetRender();
     flipRender();
-    frameScheduled = false;
+    progressRender();
+    slideRender();
+    puzzleRender();
 }
 
 function quitRender() {
@@ -55,6 +66,7 @@ function quitRender() {
         case 'off':
             quit_button.classList.remove('active', 'start');
             quit_slider.classList.remove('active', 'start');
+            clickEater.classList.remove('reset')
             // FIXME: this will immediately reset on first click, need intermediary state?
             quit_slider.firstElementChild.innerText = 'New puzzle?';
             break;
@@ -64,25 +76,6 @@ function quitRender() {
             clickEater.classList.add('active', 'reset');
             // TECHNICALLY... a violation of the state machine could end us here
             // svg.setAttribute('xlink:href', 'bootstrap-icons.svg#eject');
-            break;
-    }
-}
-
-function resetRender() {
-    const reset_button = document.getElementById('control-3');
-    const reset_slider = document.getElementById('reset-confirm');
-    const svg = reset_button.querySelector('svg use');
-    // no I'm not checking my variables, if my buttons fell off the page I can't help you.
-
-    switch (uiState.reset) {
-        case 'off':
-            reset_button.classList.remove('active');
-            reset_slider.classList.remove('active');
-            break;
-        case 'waiting':
-            reset_button.classList.add('active');
-            reset_slider.classList.add('active');
-            clickEater.classList.add('active', 'reset');
             break;
     }
 }
@@ -98,6 +91,7 @@ function register_quit() {
                 uiState.quit = 'off';
                 // TODO: (semi-)fake loading/generation screen
                 uiState.global = 'load';
+                //ready_puzzle();
                 break;
             case 'off':
                 uiState.quit = 'waiting';
@@ -118,6 +112,25 @@ function register_quit() {
             scheduleRender();
         }
     });
+}
+
+function resetRender() {
+    const reset_button = document.getElementById('control-3');
+    const reset_slider = document.getElementById('reset-confirm');
+    const svg = reset_button.querySelector('svg use');
+    // no I'm not checking my variables, if my buttons fell off the page I can't help you.
+
+    switch (uiState.reset) {
+        case 'off':
+            reset_button.classList.remove('active');
+            reset_slider.classList.remove('active');
+            break;
+        case 'waiting':
+            reset_button.classList.add('active');
+            reset_slider.classList.add('active');
+            clickEater.classList.add('active', 'reset');
+            break;
+    }
 }
 
 function register_reset() {
@@ -191,6 +204,17 @@ function register_flipper() {
         scheduleRender();
     });
 }
+
+
+function puzzleRender() {
+    if (uiState.global === 'load') {
+        // actually crunch the puzzle, then do fake loading
+    }
+    if (uiState.clicked_tile.length !== 0) {
+        // highlight/lowlight
+    }
+}
+
 
 /**
  * Construct puzzle initial state
@@ -421,7 +445,7 @@ function invert_style_color(color_string) {
     // ...colors coming out of .style are rgb(a??)()
     const parts = color_string.match(/\d+/g); // Extracts numbers
     if (!parts || parts.length !== 3) {
-        console.warn("Invalid RGB color string:", rgbColorString);
+        console.warn("Invalid RGB color string:", color_string);
         return "black"; // Fallback color
     }
 
@@ -532,7 +556,6 @@ function plan_content({size, steps, shuffles = 0,
         const selected_symbol = symbol_pool[selected_symbol_idx];
         const selected_rotation = rotation ? getRandomInt(36) * 10 : 0; // 0 - 350 in increments of 10
         const tile_code = selected_color + '!' + selected_symbol + '!' + selected_rotation;
-        let tile_number = 0;
 
         // unique tile or we don't care
         if (! code_set.has(tile_code) || ! safety) {
@@ -558,7 +581,7 @@ function plan_content({size, steps, shuffles = 0,
             symbol.innerHTML = `<use xlink:href="bootstrap-icons.svg#${selected_symbol}"/>`;
             tile.appendChild(symbol);
 
-            tile.dataset.index = tile_number.toString();
+            tile.dataset.index = tiles.length.toString();
             tile.dataset.code = nonce ? tile_code + '!' + get_nonce(6) : tile_code;
 
             color_pool.splice(selected_color_idx, 1);
@@ -598,7 +621,6 @@ function humanity_adjust(scale) {
     // the got dang rng system doesn't have distributions
     if (humanity_active) {
         let move = getRandomInt(7);
-        const current_level = parseInt(humanity_level.style.width);
         let recenter = false;
         switch (scale) {
             case 's':
@@ -607,7 +629,6 @@ function humanity_adjust(scale) {
                 if (humanity_nudge_cycle > 5 && Math.random() > 0.7) {
                     recenter = true;
                     humanity_nudge_cycle = 0;
-                    console.log('get moved');
                 } else {
                     break;
                 }
@@ -624,14 +645,14 @@ function humanity_adjust(scale) {
                 recenter = true;
                 break;
         }
-        if ((recenter && current_level > 50) || Math.random() > 0.5) {
+        if ((recenter && uiState.humanity > 50) || Math.random() > 0.5) {
             move = -move;
         }
 
-        move = Math.max(7, Math.min(93, current_level + move));
+        move = Math.max(4, Math.min(95, uiState.humanity + move));
 
         requestAnimationFrame(() => {
-            humanity_level.style.width = move + '%';
+            humanity_level.style.transform = `scaleX(${move}%)`;
             humanity_robot.classList.remove('alert');
             humanity_human.classList.remove('alert');
             void humanity_human.offsetWidth;
@@ -641,11 +662,12 @@ function humanity_adjust(scale) {
             } else if (move < 25) {
                 humanity_human.classList.add('alert');
             }
+            uiState.humanity = move;
         });
     }
 }
 function register_humanity() {
-    humanity_level.style.width = '50%';
+    humanity_level.style.transform = 'scaleX(50%)';
     // FIXME: setup variable callback chain
     setInterval(() => {humanity_adjust('s')}, 3000)
 }
@@ -695,7 +717,7 @@ function register_info() {
     clickEater.addEventListener('click', (event) => {
         if (uiState.info) {
             uiState.info = false;
-            // WHOOPS, we need to stansition state from init info to... Whatever is next. Start I guess,
+            // WHOOPS, we need to transition state from init info to... Whatever is next. Start I guess,
             if (uiState.global === 'info') {
                 uiState.global = 'start';
             }
@@ -709,67 +731,49 @@ const progress_shape = 'triangle';
 /**
  * Render progress graphic - does not request frame
  */
-function render_progress() {
+function progressRender() {
     // I gotta figure out animation frames and different functions doing what.
     //  if I request a frame inside a frame it goes to the next frame which isn't ideal.
-    const progressContainer = document.getElementById('addon-progress');
-    progressContainer.innerHTML = '';
-    if (current_puzzle !== -1) {
-        const full_tile = document.createElement('div');
-        full_tile.classList.add('tile-base');
-        const full_symbol = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-        full_symbol.innerHTML = `<use xlink:href="bootstrap-icons.svg#${progress_shape}-fill"/>`
-        full_tile.appendChild(full_symbol);
-        for (let i = 0; i < (current_puzzle - 1); i++) {
-            progressContainer.appendChild(full_tile.cloneNode(true));
+    // FIXME: it's still gonna blink the whole bar on update, split into build and update funcs.
+    //  tbh the blink is probably just safari
+    // FIXME: intiial state should be empty (check global ui not in load/ensure state in play for current idx)
+    if (puzzles.length > 1 && uiState.progress_update) {
+        const progressContainer = document.getElementById('addon-progress');
+
+        progressContainer.parentElement.classList.add('show-progress');
+        uiState.progress_update = false;
+
+        progressContainer.innerHTML = '';
+        if (uiState.puzzleid !== -1) {
+            const full_tile = document.createElement('div');
+            full_tile.classList.add('tile-base');
+            const full_symbol = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+            full_symbol.innerHTML = `<use xlink:href="bootstrap-icons.svg#${progress_shape}-fill"/>`
+            full_tile.appendChild(full_symbol);
+            for (let i = 0; i < (uiState.puzzleid - 1); i++) {
+                progressContainer.appendChild(full_tile.cloneNode(true));
+            }
+
+            const half_tile = document.createElement('div');
+            half_tile.classList.add('tile-base');
+            const half_symbol = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+            half_symbol.innerHTML = `<use xlink:href="bootstrap-icons.svg#${progress_shape}-half"/>`
+            half_tile.append(half_symbol)
+            progressContainer.appendChild(half_tile);
         }
 
-        const half_tile = document.createElement('div');
-        half_tile.classList.add('tile-base');
-        const half_symbol = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-        half_symbol.innerHTML = `<use xlink:href="bootstrap-icons.svg#${progress_shape}-half"/>`
-        half_tile.append(half_symbol)
-        progressContainer.appendChild(half_tile);
-    }
+        const empty_tile = document.createElement('div');
+        empty_tile.classList.add('tile-base');
+        const empty_symbol = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        empty_symbol.innerHTML = `<use xlink:href="bootstrap-icons.svg#${progress_shape}"/>`;
+        empty_tile.append(empty_symbol);
 
-    const empty_tile = document.createElement('div');
-    empty_tile.classList.add('tile-base');
-    const empty_symbol = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-    empty_symbol.innerHTML = `<use xlink:href="bootstrap-icons.svg#${progress_shape}"/>`;
-    empty_tile.append(empty_symbol);
-
-    for (let i = current_puzzle < 0 ? 0 : current_puzzle; i < puzzles.length - 1; i++) {
-        progressContainer.appendChild(empty_tile.cloneNode(true));
+        for (let i = uiState.puzzleid < 0 ? 0 : uiState.puzzleid; i < puzzles.length - 1; i++) {
+            progressContainer.appendChild(empty_tile.cloneNode(true));
+        }
     }
 }
 
-/**
- * Lock play region, either to force Start or Retry
- * @param {boolean} failed - user failed - render failure state instead of start state
- */
-function lock_play(failed = false) {
-    // just click the dang button, then snap off some click-eater settings
-    document.getElementById('control-7').click();
-
-}
-
-function init_flow() {
-    // kinda wihsing I had xx_clicked function
-    //  lmao or I can fake a click
-    // hello it is I, the user please tell me all about this thank you
-    document.getElementById('control-1').click();
-
-    if (puzzles.length !== 1) {
-        requestAnimationFrame(() => {
-            document.getElementById('addon-container').classList.add('show-progress');
-            render_progress();
-        });
-    }
-    // FIXME: render currently overrides the current puzzle number and that screws up progress_init
-
-
-
-}
 
 let initialized = false;
 /**
@@ -789,8 +793,14 @@ function inject_controls() {
 
         register_humanity();
 
+        register_arrows();
+
     }
 
+}
+
+function inject_debug() {
+    // TODO: unhook overflow on main div, glue on a panel to control puzzle zero settings
 }
 
 
@@ -802,6 +812,7 @@ function tile_clicked(event) {
 
     if (clicked_base.dataset.active) {
         // kill the lights
+        uiState.active_tile = [];
         requestAnimationFrame(() => {
             const base_tiles = Array.from(puzzleContainer.querySelectorAll('.tile-base'));
             base_tiles.forEach(item => {
@@ -814,6 +825,7 @@ function tile_clicked(event) {
     }
     else {
         // highlight/lowlight
+        uiState.active_tile = [clicked_base.dataset.row, clicked_base.dataset.col];
         requestAnimationFrame(() => {
             const base_tiles = Array.from(puzzleContainer.querySelectorAll('.tile-base'));
             base_tiles.forEach(item => {
@@ -853,21 +865,51 @@ const puzzles = [
     }
 ];
 
-let current_puzzle = 0;
+
+function intiializeBoard() {
+
+    // get blasted
+    puzzleContainer.innerHTML = '';
+    puzzleContainer.style.gridTemplateColumns = `repeat(${size}, 1fr)`;
+    puzzleContainer.style.gridTemplateRows = `repeat(${size}, 1fr)`;
+    puzzleContainer.style.gap = '0px';
+
+    solutionContainer.innerHTML = '';
+    solutionContainer.style.gridTemplateColumns = `repeat(${size}, 1fr)`;
+    solutionContainer.style.gridTemplateRows = `repeat(${size}, 1fr)`;
+    solutionContainer.style.gap = '0px';
+
+    for (let i = 0; i < size; i++) {
+        for (let j = 0; j < size; j++) {
+            const idx = j + (size * i);
+            // Lol a second .appendChild yoinks it away from the first parent (something something custody).
+            //  although I bet you could do some tricky stuff with that.
+            // this is the easy one, you can have the generated tile
+            solutionContainer.appendChild(tiles[idx]);
+
+            // you... are a problem
+            const base_element = document.createElement('div');
+            base_element.classList.add('tile-base');
+            base_element.dataset.col = j.toString();
+            base_element.dataset.row = i.toString();
+            base_element.dataset.index = idx.toString();
+
+            const puzzle_tile = tiles[init_map.get(idx)].cloneNode(true);
+            base_element.appendChild(puzzle_tile);
+
+            const overlay = document.createElement('div');
+            overlay.classList.add('tile-overlay');
+
+            overlay.addEventListener('click', tile_clicked)
+            base_element.appendChild(overlay);
+
+            puzzleContainer.appendChild(base_element);
+        }
+    }
+}
 
 function render_puzzle() {
-    if (current_puzzle === -1) {
-        // swap quit for start and lock frame
-        // FRICK I CAN'T SET QUIT CONFIRM STATUS FROM HERE
-        //  ...I don't really wanna expose it to globals, I'll have it check the current puzzle I guess.
-        //  better +1 global than +2 I GUESSSSSS
-
-
-        current_puzzle = 0;
-        return
-    }
-
-    const [tiles, init_map, moves] = plan_content(puzzles[current_puzzle]);
+    const [tiles, init_map, moves] = plan_content(puzzles[uiState.puzzleid]);
 
     requestAnimationFrame(() => {
         // get blasted
@@ -927,6 +969,147 @@ function render_puzzle() {
     });
 
     text_dump.innerText += `${moves}`;
+}
+
+function slideRender() {
+
+}
+
+function register_arrows() {
+    const up = document.getElementById('control-2');
+    const down = document.getElementById('control-8');
+    const left = document.getElementById('control-4');
+    const right = document.getElementById('control-6');
+    const slide_overlay = document.getElementById('slide-overlay')
+    const click_eater = document.getElementById('click-eater');
+
+    function arrowUnlock() {
+        click_eater.classList.remove('block');
+        slide_overlay.classList.remove('active');
+    }
+
+    function arrowhandler(event, direction) {
+        if (uiState.active_tile.length === 0) {
+            return; // why do you waste my time like this
+        }
+
+        // lock up the ui instantly, it's also invisible and one change so screw frames
+        click_eater.classList.add('block'); // blocked but not active, no click events probably.
+        const tile_collection = puzzleContainer.getElementsByClassName('puzzle-tile');
+
+        // suck up current state
+        const size = puzzles[uiState.puzzleid].size;
+        const vert = direction === 'u' || direction === 'd'
+
+        // pull out row/col that is moving before reorg
+        const grid = [];
+        const active_row = [];
+        for (let i = 0; i < size; i++) {
+            grid[i] = [];
+            for (let j = 0; j < size; j++) {
+                const idx = j + (size*i);
+                const tile = puzzleContainer.children[idx];
+                grid[i][j] = tile.getElementsByClassName('puzzle-tile')[0];
+
+                if ((!vert && i === uiState.active_tile[0]) || (vert && j === uiState.active_tile[1])) {
+                    const idx = j + (size*i);
+                    active_row.push(puzzleContainer.children[idx]);
+                }
+            }
+        }
+
+        // jumble internal data
+        if (vert) {
+            column_shift(uiState.grid, uiState.active_tile[0], direction === 'd' ? -1 : 1)
+        } else {
+            row_shift(uiState.grid, uiState.active_tile[1], direction === 'l' ? -1 : 1)
+        }
+
+        requestAnimationFrame(() => {
+            // OH MY GOD I CAN PULL THE LOCATIONS FROM THE TILES PHEW
+            slide_overlay.classList.add('active');
+            clickEater.classList.add('block');
+            slide_overlay.innerHTML = '';
+
+            const overlay_rect = slide_overlay.getBoundingClientRect();
+
+            for (let i = 0; i < size; i++) {
+                const slide_copy = active_row[i].cloneNode(true);
+                const tile_rect = active_row[i].getBoundingClientRect();
+
+                slide_copy.style.position = 'absolute';
+                slide_copy.style.display = 'block';
+                slide_copy.style.top = `${tile_rect.top - overlay_rect.top}px`;
+                slide_copy.style.left = `${tile_rect.left - overlay_rect.left}px`;
+                slide_copy.style.width = `${tile_rect.width}px`;
+                slide_copy.style.height = `${tile_rect.height}px`;
+
+                slide_overlay.appendChild(slide_copy);
+            }
+            // and then glue one on the end
+            const slide_copy = active_row.at(direction === 'u' || direction === 'l' ? 0 : -1).cloneNode(true);
+            // haha big brain am winning again, I only need to slide the entire div, not each member.
+            //  lmao it incredibly will NOT work that way
+            let tx = 'idk im dumb!'
+            if (vert) {
+                const tile_rect = active_row.at(direction === 'u' ? -1 : 0).getBoundingClientRect();
+                slide_copy.style.left = `${tile_rect.left - overlay_rect.left}px`;
+                if (direction === 'u') {
+                    slide_copy.style.top = `${tile_rect.bottom - overlay_rect.top}px`;
+                    tx = `translateY(-${tile_rect.height}px)`
+                } else {
+                    slide_copy.style.top = `${overlay_rect.top - tile_rect.height}px`;
+                    tx = `translateY(${tile_rect.height}px)`
+                }
+            } else {
+                const tile_rect = active_row.at(direction === 'l' ? -1 : 0).getBoundingClientRect();
+                slide_copy.style.top = `${tile_rect.top - overlay_rect.top}px`;
+                if (direction === 'l') {
+                    slide_copy.style.left = `${tile_rect.right - overlay_rect.left}px`;
+                    // eugh why are my widths trying to access the secret robot internet but not my heights
+                    tx = `translateX(-${tile_rect.width}px)`
+                } else {
+                    slide_copy.style.left = `${overlay_rect.left - tile_rect.width}px`;
+                    tx = `translateX(${tile_rect.width}px)`
+                }
+            }
+            slide_copy.style.position = 'absolute';
+            slide_copy.style.display = 'block';
+            slide_copy.style.width = active_row[0].offsetWidth + 'px';
+            slide_copy.style.height = active_row[0].offsetHeight + 'px';
+            slide_overlay.appendChild(slide_copy);
+            // HAVE to force reflow because this object starts in the overflow
+            //  the others don't seem to need it
+            void slide_copy.offsetWidth;
+            slide_copy.style.transform = tx;
+
+            for (const child of slide_overlay.children) {
+                child.style.transform = tx;
+            }
+
+            slide_overlay.firstChild.addEventListener('transitionend', () => {
+                requestAnimationFrame(() => {
+                    slide_overlay.innerHTML = ''; // get blasted
+                    slide_overlay.style.transform = ''; // just to be clean
+                    slide_overlay.classList.remove('active');
+                    clickEater.classList.remove('block');
+                })
+            }, {once: true});
+        });
+    }
+
+    up.addEventListener('click', (event) => {
+        arrowhandler(event, 'u');
+    });
+    down.addEventListener('click', (event) => {
+        arrowhandler(event, 'd');
+    });
+    left.addEventListener('click', (event) => {
+        arrowhandler(event, 'l');
+    });
+    right.addEventListener('click', (event) => {
+        arrowhandler(event, 'r');
+    });
 }
 
 /*
