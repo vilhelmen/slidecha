@@ -13,6 +13,10 @@
     <div id="dynamic-top-left">
       <div id="puzzle-holder">
         <div id="puzzle-container"></div>
+        <div id="loading-decor" class="tile-fuzz reveal">
+            <!-- ubuntu? lol  gear-wide-connected those are lopsided-->
+            <svg><use xlink:href="bootstrap-icons.svg#radioactive"/></svg>
+        </div>
         <!-- overlay div I can slide fake tiles around on -->
         <div id="slide-overlay"></div>
         <!-- little id popup for when we flip, tragically not shareable with help overlay? -->
@@ -36,19 +40,26 @@
         <div id="addon-upper">
           <div id="addon-humanity">
             <!-- I can't believe I'm optimizing this little... ANYWAY this damn blinker is makinging my mac burn my fingertops -->
-            <div class="tile-base" id="robot-tile"><div class="blinker"></div><svg id="robot"><use xlink:href="bootstrap-icons.svg#robot"/></svg></div>
-            <div class="progress-track"><div id="humanity" class="progress-fill"></div><div></div></div>
-            <div class="tile-base" id="human-tile"><div class="blinker"></div><svg id="human"><use xlink:href="bootstrap-icons.svg#person-arms-up"/></svg></div>
+            <div class="tile-base" id="robot-tile"><svg id="robot"><use xlink:href="bootstrap-icons.svg#robot"/></svg><div class="blinker"></div></div>
+            <div id="humanity-track" class="progress-track"><div id="humanity" class="progress-fill"></div><div id="humanity-divider" class="progress-divider"></div></div>
+            <div class="tile-base" id="human-tile"><svg id="human"><use xlink:href="bootstrap-icons.svg#person-arms-up"/></svg><div class="blinker"></div></div>
             <!-- person-fill person-arms-up person-standing -->
           </div>
         </div>
         <div id="addon-lower">
-          <div id="addon-timer"></div>
+          <!-- get out you're crowding -->
+          <!--<div id="frien" class="tile-base"><svg><use xlink:href="bootstrap-icons.svg#emoji-smile"/></svg></div>-->
+          <div id="addon-timer">
+            <div id="timer-icon" class="tile-base"><svg><use xlink:href="bootstrap-icons.svg#alarm"/></svg></div>
+            <span id="time" data-reset="00:00:00">00:00:00</span>
+          </div>
           <div id="addon-moves">
-            <div class="tile-base"><svg><use xlink:href="bootstrap-icons.svg#activity"/></svg></div>
-            <div id="aa"></div>
-            <div class="tile-base"><svg><use xlink:href="bootstrap-icons.svg#slash-lg"/></svg></div>
-            <div class="tile-base"><svg><use xlink:href="bootstrap-icons.svg#infinity"/></svg></div>
+            <div id="move-icon" class="tile-base alive">
+              <svg id="alive"><use xlink:href="bootstrap-icons.svg#activity"/></svg>
+              <svg id="dead"><use xlink:href="bootstrap-icons.svg#heartbreak"/></svg>
+            </div>
+            <span id="move-data" data-reset=" 0 / ∞"> 0 / ∞</span>
+            <!--<div id="move-slash" class="tile-base"><svg><use xlink:href="bootstrap-icons.svg#slash-lg"/></svg></div>-->
           </div>
         </div>
 
@@ -67,6 +78,7 @@
     <div id="dynamic-top-right">
       <div id="solution-holder">
         <div id="solution-container"></div>
+        <div class="tile-fuzz"></div>
         <div class="container-id"><svg><use xlink:href="bootstrap-icons.svg#image"/></svg></div>
         <div class="info-panel"><div class="info-body">
           <p>
@@ -119,7 +131,6 @@
           </div>
           <div class="tile-base start" id="control-7">
             <div class="control-tile">
-              <!-- TODO: svg div or something idk -->
               <svg id="quit-icon"><use xlink:href="bootstrap-icons.svg#eject"/></svg>
               <svg id="play-icon"><use xlink:href="bootstrap-icons.svg#play"/></svg>
               <div class="tile-overlay"></div>
@@ -134,7 +145,8 @@
           </div>
           <div class="tile-base" id="control-9">
             <div class="control-tile">
-              <svg><use xlink:href="bootstrap-icons.svg#layout-wtf"/></svg>
+              <svg><use xlink:href="bootstrap-icons.svg#arrows-expand-vertical"/></svg>
+              <!-- I should probably just use arrow-left-right or arrows-expand-vertical -->
               <!-- columns-gap layout-wtf -->
               <!-- fullscreen fullscreen-exit ? -->
               <!-- I love that but I should probably use arrows-angle-expand and arrows-angle-shrink -->
@@ -165,7 +177,7 @@
 
       inject_controls();
 
-      render_puzzle();
+      // render_puzzle();
       scheduleRender();
 
       // Your CAPTCHA code goes here, we've added a simple example below:

@@ -2,17 +2,44 @@
 // does this map make my state look big?
 //  also idk what this type is oh no help
 const uiState = {
-    global: 'info', // info -> start -> load -> play -> (start/fail(/reset?)) -> (load/exit)
+    global: 'info', // info -> start -> load -> play -> (win/lose) -> (start/exit)
     quit: 'start', // start, off, waiting
     reset: 'off', // off, waiting
-    info: true,
-    do_flip: false,
-    puzzleid: 0,
-    progress_update: true,
-    humanity: 50,
-    tile_time: 0.1,
-    active_tile: [],
-    clicked_tile: []
+    info: false, // info is currently up
+    // timer controls have escaped containment
+    // timer: false, // run the timer
+    render: {
+        quit: false, // update quit system
+        reset: false, // update reset system
+        info: true, // flip info state
+        flip: false, // do a flip
+        progress: true, // update progress state
+        humanity: true, // update humanity level
+        puzzle: false, // update puzzle state
+
+        tile_time: 10, // ms to fake load a tile
+        do_reset: false, // reset puzzle board to start
+
+        slide_action: false, // execute slide
+        slide_remap: null, // reorder info for the puzzle renderer
+
+        relight: false, // fiddle with tile lighting
+        moves: false // update move count
+    },
+    puzzleid: 0, // current puzzle
+    // humanity: 50, // humanity relocated to its own little bundle
+
+    move: null, // current move
+    total_moves: null, // total moves for current puzzle, -1 = inf
+
+    expected_moves: null,
+    current_solution: null,
+    tile_map: null, // tile mapping from the generator
+    current_board: null,
+
+    time: null, // timer start
+
+    active_tile: null, // active tile node
 };
 
 let frameScheduled = false;
@@ -30,21 +57,109 @@ function renderQueue() {
     // if it's at the top, we can render more than needed.
     //  if it's at the bottom, we can render less than needed.
     frameScheduled = false;
-    renderInfo();
-    quitRender();
-    resetRender();
-    flipRender();
-    progressRender();
+
+    if (uiState.render.info) {uiState.render.info = false; infoRender();}
+    if (uiState.render.quit) {uiState.render.quit = false; quitRender();}
+    if (uiState.render.reset) {uiState.render.reset = false; resetRender();}
+    if (uiState.render.flip) {uiState.render.flip = false; flipRender();}
+    if (uiState.render.humanity) {uiState.render.humanity = false; humanityRender();}
+    if (uiState.render.progress) {uiState.render.progress = false; progressRender();}
+    // timer renderer exists outside scheduler because it (was) a busy boy
+    if (uiState.render.moves) {uiState.render.moves = false; movesRender();}
+    // CLICK RENDERER MUST COME BEFORE... I FORGET. BUT IT SHOULD GO BEFORE PUZZLE RENDER.
     slideRender();
-    puzzleRender();
+    if (uiState.render.relight) {uiState.render.relight = false; relightRender();}
+    if (uiState.render.puzzle) {uiState.render.puzzle = false; puzzleRender()};
+}
+
+function formatTime(ms) {
+    if (ms > 356400000) {
+        // congrats, have a performance gain :)
+        stop_timer();
+        return '+99:99:99.9'
+    }
+    let seconds = Math.floor(ms / 1000);
+    let minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+
+    seconds %= 60;
+    minutes %= 60;
+
+    // How do I import left-pad
+    const fH = hours.toString().padStart(2, '0');
+    const fM = minutes.toString().padStart(2, '0');
+    const fS = seconds.toString().padStart(2, '0');
+
+    return `${fH}:${fM}:${fS}`;
+}
+const timerSpan = document.getElementById('time');
+let timerFunc = null;
+function timerRender() {
+    // no I don't know the difference in text objects and no the popup in webstorm saying what it is does not help
+    timerSpan.textContent = formatTime(performance.now() - uiState.time);
+}
+function start_timer() {
+    // HOO BABY THIS PUPPY RUNS LIKE TRASH
+    //  well even when changed from a frame loop to an interval at 100ms it didn't help enough
+    // Tragic, 1s accuracy it is then.
+    if (timerFunc === null){
+        uiState.time = performance.now();
+        timerFunc = setInterval(timerRender, 1000);
+    }
+}
+function stop_timer() {
+    if (timerFunc !== null) {
+        clearInterval(timerFunc);
+    }
+}
+function reset_timer() {
+    stop_timer();
+    timerSpan.textContent = timerSpan.dataset.reset;
+}
+
+function movesRender() {
+    // during load state we dump the content and reload the new stuff, hidden
+    // in play, we mark it visible. idk how we detect a move and increment
+    //  idk who is going to track lose/win states
+
+    const move_container = document.getElementById('addon-moves');
+    //const move_icon = document.getElementById('move-icon');
+    const move_data = document.getElementById('move-data');
+
+    if (uiState.global === 'start') {
+        move_container.classList.add('flip');
+        move_container.addEventListener('transitionend', function handler() {
+            move_container.classList.add('alive');
+            requestAnimationFrame(() => {
+                move_data.innerText = move_data.dataset.reset;
+                move_container.classList.remove('flip');
+            });
+        });
+        return;
+    }
+
+    const total = uiState.total_moves === -1 ? '∞' : uiState.total_moves;
+    move_data.innerText = ` ${uiState.move} / ${total}`;
+
+    // surprise, it's slightly more complicated!
+    if (uiState.global === 'lose') {
+        move_container.classList.add('flip');
+        move_container.addEventListener('transitionend', function handler() {
+            move_container.classList.add('dead');
+            requestAnimationFrame(() => {
+                move_container.classList.remove('flip');
+            });
+        });
+    }
 }
 
 function quitRender() {
+    // I'm allowing myself to scan time dom every time I call this fun because
+    //  I've gated the access to this function
     const quit_button = document.getElementById('control-7');
     const quit_slider = document.getElementById('quit-confirm');
     const span = quit_slider.getElementsByTagName('span')[0];
-    const svg = quit_button.querySelector('svg use');
-    // no I'm not checking my variables, if my buttons fell off the page I can't help you.
+    // no I'm not checking the elements, if my buttons fell off the page I can't help you.
 
     switch (uiState.quit) {
         // we just reuse the reset state for click eater
@@ -56,18 +171,20 @@ function quitRender() {
             } else {
                 span.innerText = 'Next';
             }
-            // svg.setAttribute('xlink:href', 'bootstrap-icons.svg#play');
+            // Wait for the info panel to go away before rendering
             if (uiState.global !== 'info') {
                 quit_button.classList.add('active');
                 quit_slider.classList.add('active');
-                clickEater.classList.add('active', 'reset');
+                clickEater.classList.add('active', 'reset', 'block');
             }
             break;
         case 'off':
             quit_button.classList.remove('active', 'start');
             quit_slider.classList.remove('active', 'start');
-            clickEater.classList.remove('reset')
+            clickEater.classList.remove('active', 'reset', 'block');
             // FIXME: this will immediately reset on first click, need intermediary state?
+            //  WONTFIX: I can't be convinced to care that much with the deadline this close
+            //   and rapid clicking can screw up any state tracking w/o tight animation timing tuning
             quit_slider.firstElementChild.innerText = 'New puzzle?';
             break;
         case 'waiting':
@@ -75,7 +192,6 @@ function quitRender() {
             quit_slider.classList.add('active');
             clickEater.classList.add('active', 'reset');
             // TECHNICALLY... a violation of the state machine could end us here
-            // svg.setAttribute('xlink:href', 'bootstrap-icons.svg#eject');
             break;
     }
 }
@@ -87,20 +203,22 @@ function register_quit() {
         event.stopPropagation(); // ?? who else could have this event
         switch (uiState.quit) {
             case 'start':
-                // TODO: game start, wreck up the place
                 uiState.quit = 'off';
-                // TODO: (semi-)fake loading/generation screen
-                uiState.global = 'load';
-                //ready_puzzle();
+                puzzleCycle();
                 break;
             case 'off':
                 uiState.quit = 'waiting';
                 break;
             case 'waiting':
                 // requested new puzzle, wreck up the place or get annoying
-                // TODO: reset/nag hook
+                if (uiState.global === 'win' || uiState.global === 'lose') {
+                    puzzleCycle();
+                } else {
+                    // TODO: do nag affirmation
+                }
                 uiState.quit = 'off';
         }
+        uiState.render.quit = true;
         scheduleRender();
     });
 
@@ -109,6 +227,7 @@ function register_quit() {
         // clicked somewhere else
         if (uiState.quit === 'waiting') {
             uiState.quit = 'off';
+            uiState.render.quit = true;
             scheduleRender();
         }
     });
@@ -117,13 +236,12 @@ function register_quit() {
 function resetRender() {
     const reset_button = document.getElementById('control-3');
     const reset_slider = document.getElementById('reset-confirm');
-    const svg = reset_button.querySelector('svg use');
-    // no I'm not checking my variables, if my buttons fell off the page I can't help you.
 
     switch (uiState.reset) {
         case 'off':
             reset_button.classList.remove('active');
             reset_slider.classList.remove('active');
+            clickEater.classList.remove('active', 'reset');
             break;
         case 'waiting':
             reset_button.classList.add('active');
@@ -138,15 +256,23 @@ function register_reset() {
 
     reset_button.addEventListener('click', (event) => {
         event.stopPropagation(); // ?? who else could have this event
+        if (uiState.global !== 'play') {
+            // get ignored loser
+            // FIXME: turn off hover... but idk what would flick the renderer on to do that
+            //  off by default I guess?
+            return;
+        }
         switch (uiState.reset) {
             case 'off':
                 uiState.reset = 'waiting';
                 break;
             case 'waiting':
-                // TODO: reset state handler
                 uiState.reset = 'off';
+                uiState.render.do_reset = true; // lol buckle up
+                uiState.render.puzzle = true;
                 break;
         }
+        uiState.render.reset = true;
         scheduleRender();
     });
 
@@ -157,6 +283,7 @@ function register_reset() {
         // clicked somewhere else
         if (uiState.reset === 'waiting') {
             uiState.reset = 'off';
+            uiState.render.reset = true;
             scheduleRender();
         }
     });
@@ -164,35 +291,32 @@ function register_reset() {
 
 function flipRender() {
     // no, I will not be naming these consistently, thank you.
-    if (uiState.do_flip) {
-        const flip_button = document.getElementById('control-9');
-        const svg_element = flip_button.getElementsByTagName('svg')[0];
+    const flip_button = document.getElementById('control-9');
+    const svg_element = flip_button.getElementsByTagName('svg')[0];
 
-        const dyn_left = document.getElementById('dynamic-top-left');
-        const puzzle_holder = document.getElementById('puzzle-holder');
-        const dyn_right = document.getElementById('dynamic-top-right');
-        const solution_holder = document.getElementById('solution-holder');
+    const dyn_left = document.getElementById('dynamic-top-left');
+    const puzzle_holder = document.getElementById('puzzle-holder');
+    const dyn_right = document.getElementById('dynamic-top-right');
+    const solution_holder = document.getElementById('solution-holder');
 
-        const soln_id = solution_holder.getElementsByClassName('container-id')[0];
-        const puzzle_id = puzzle_holder.getElementsByClassName('container-id')[0];
+    const soln_id = solution_holder.getElementsByClassName('container-id')[0];
+    const puzzle_id = puzzle_holder.getElementsByClassName('container-id')[0];
 
-        soln_id.style.animation = 'none';
-        puzzle_id.style.animation = 'none';
-        void soln_id.offsetHeight; // this forces things to recalculate so the animation reapplies
-        void puzzle_id.offsetHeight;
-        soln_id.style.animation = 'var(--id-flash-animation-params)';
-        puzzle_id.style.animation = 'var(--id-flash-animation-params)';
+    soln_id.style.animation = 'none';
+    puzzle_id.style.animation = 'none';
+    void soln_id.offsetHeight; // this forces things to recalculate so the animation reapplies
+    void puzzle_id.offsetHeight;
+    soln_id.style.animation = 'var(--id-flash-animation-params)';
+    puzzle_id.style.animation = 'var(--id-flash-animation-params)';
 
-        if (!flip_button.classList.contains('active')) {
-            dyn_left.appendChild(solution_holder);
-            dyn_right.appendChild(puzzle_holder);
-            flip_button.classList.add('active');
-        } else {
-            dyn_left.appendChild(puzzle_holder);
-            dyn_right.appendChild(solution_holder);
-            flip_button.classList.remove('active');
-        }
-        uiState.do_flip = false;
+    if (!flip_button.classList.contains('active')) {
+        dyn_left.appendChild(solution_holder);
+        dyn_right.appendChild(puzzle_holder);
+        flip_button.classList.add('active');
+    } else {
+        dyn_left.appendChild(puzzle_holder);
+        dyn_right.appendChild(solution_holder);
+        flip_button.classList.remove('active');
     }
 }
 
@@ -200,7 +324,7 @@ function register_flipper() {
     const flip_button = document.getElementById('control-9');
     flip_button.addEventListener('click', (event) => {
         event.stopPropagation(); // ??
-        uiState.do_flip = true;
+        uiState.render.flip = true;
         scheduleRender();
     });
 }
@@ -208,11 +332,159 @@ function register_flipper() {
 
 function puzzleRender() {
     if (uiState.global === 'load') {
-        // actually crunch the puzzle, then do fake loading
+        // get blasted
+        puzzleContainer.innerHTML = '';
+        puzzleContainer.style.gridTemplateColumns = `repeat(${puzzles[uiState.puzzleid].size}, 1fr)`;
+        puzzleContainer.style.gridTemplateRows = `repeat(${puzzles[uiState.puzzleid].size}, 1fr)`;
+
+        solutionContainer.innerHTML = '';
+        solutionContainer.style.gridTemplateColumns = puzzleContainer.style.gridTemplateColumns;
+        solutionContainer.style.gridTemplateRows = puzzleContainer.style.gridTemplateRows;
+
+        // idk where you went but come back
+        clickEater.classList.add('block');
+
+        const decor = document.getElementsByClassName('tile-fuzz');
+        for (let i = 0; i < decor.length; i++) {
+            // force a redraw with the transition snapped off to blink the blur on
+            decor[i].classList.add('noanim');
+            decor[i].classList.remove('reveal');
+            void decor[i].offsetWidth;
+            decor[i].classList.remove('noanim');
+        }
+
+        // do fake loading anim
+        let idx = 0;
+        function load_tile() {
+            solutionContainer.appendChild(uiState.current_solution[idx]);
+            puzzleContainer.appendChild(uiState.current_board[idx]);
+            idx++;
+            if (idx < uiState.current_board.length) {
+                setTimeout(() => {requestAnimationFrame(load_tile)}, uiState.render.tile_time)
+            } else {
+                uiState.global = 'play';
+                uiState.render.progress = true;
+                uiState.render.moves = true;
+                start_timer();
+                clickEater.classList.remove('block');
+                for (let i = 0; i < decor.length; i++) {
+                    decor[i].classList.add('reveal');
+                }
+                scheduleRender();
+            }
+        }
+        load_tile();
+    } else if (uiState.render.do_reset) {
+        // lmao you're gonna regret it
+        clickEater.classList.add('block');
+
+        const decor = document.getElementById('loading-decor');
+        decor.classList.add('noanim');
+        decor.classList.remove('reveal');
+        void decor.offsetWidth;
+        decor.classList.remove('noanim');
+
+        let idx = 0;
+        function reload_tile() {
+            puzzleContainer.appendChild(uiState.current_board[idx]);
+            idx++;
+            if (idx < uiState.current_board.length) {
+                setTimeout(() => {requestAnimationFrame(reload_tile)}, uiState.render.tile_time)
+            } else {
+                clickEater.classList.remove('block');
+                decor.classList.add('reveal');
+            }
+        }
+
+        // well I actually wanted this to remove them off then end of the grid
+        //  but they don't go out right because we loaded fancy
+        function unload_tile() {
+            puzzleContainer.lastChild.remove();
+            if (puzzleContainer.childElementCount === 0) {
+                setTimeout(() => {requestAnimationFrame(reload_tile)}, uiState.render.tile_time)
+            } else {
+                setTimeout(() => {requestAnimationFrame(unload_tile)}, uiState.render.tile_time)
+            }
+        }
+        unload_tile();
+    } else if (uiState.global = 'lose') {
+        // dim the lights.
     }
-    if (uiState.clicked_tile.length !== 0) {
-        // highlight/lowlight
+}
+
+
+/**
+ * Generate new puzzle, setup state to be rendered, request it.
+ * Moves state to load for locked render loop
+ */
+function puzzleCycle() {
+    // get new data, jam it in places. Handoff to renderer to loop load and then move to play
+
+    // avoid using -1 as the start idx because I don't want it to break things (but it shouldn't!)
+    if (uiState.global !== 'start') {
+        uiState.puzzleid++;
+    } else {
+        // idk where else to put you
+        puzzleContainer.addEventListener('click', tile_clicked);
     }
+
+    const [solution_tiles, init_map, moves] = plan_content(puzzles[uiState.puzzleid]);
+
+    uiState.expected_moves = moves;
+    if ('move_multiplier' in puzzles[uiState.puzzleid]) {
+        uiState.total_moves = Math.round(moves * puzzles[uiState.puzzleid].move_multiplier);
+    } else {
+        uiState.total_moves = -1;
+    }
+    uiState.move = 0;
+    uiState.render.moves = true;
+
+    // solution_tiles = raw tiles fresh out the oven, send it to the solution region in order
+    uiState.current_solution = solution_tiles;
+
+    // this will be our court eunich, scheming from his cage (.tile-base) and devising his tricks
+    const puzzle_tiles = []
+
+    // I gotta do something about this variable
+    const size = puzzles[uiState.puzzleid].size;
+    for (let idx = 0; idx < solution_tiles.length; idx++) {
+        const remap_idx = init_map.get(idx);
+        const i = Math.floor(remap_idx / size);
+        const j = remap_idx % size;
+        // GET IN THE DIV
+        const base_element = document.createElement('div');
+        base_element.classList.add('tile-base');
+        // FIXME: remove? but I kinda need some orientation for clicking
+        //  but then I have to keep updating it when moving....?
+        //  this is why I wanted to only move the tiles but idk!!
+        //  ...I could still do that?
+        base_element.dataset.row = i.toString();
+        base_element.dataset.col = j.toString();
+        base_element.dataset.index = idx.toString();
+        base_element.dataset.start = remap_idx;
+
+        // I have an idea
+        base_element.style.gridRow = `${i + 1} / span 1`;
+        base_element.style.gridColumn = `${j + 1} / span 1`;
+
+        const puzzle_tile = solution_tiles[idx].cloneNode(true);
+        base_element.appendChild(puzzle_tile);
+
+        const overlay = document.createElement('div');
+        overlay.classList.add('tile-overlay');
+
+        // I actually only need the one listener on the parent
+        // base_element.addEventListener('click', tile_clicked)
+        base_element.appendChild(overlay);
+        puzzle_tiles.push(base_element);
+    }
+    uiState.current_board = puzzle_tiles;
+
+    // webstorm why will you autocomplete when I type uistate but NOT capitalize it for me
+    uiState.global = 'load';
+    uiState.render.puzzle = true;
+    uiState.render.timer = true;
+    scheduleRender();
 }
 
 
@@ -308,11 +580,12 @@ function plan_puzz(size = 3, shifts= 4, shuffle = 0) {
     return [grid, actual_moves, position_map];
 }
 
-// ty MDN, I'm sorry Mozilla keeps making terrible business decisions
+// ty MDN, I'm sorry Mozilla keeps making just ABSOLUTELY *terrible* business decisions
 function getRandomInt(max) {
     return Math.floor(Math.random() * max);
 }
 
+// these ended up being a lot less important than I expected
 /**
  * Shift a grid row
  * @param {Array<Array<number>>} grid - The grid to shift
@@ -331,7 +604,6 @@ function row_shift(grid, idx, magnitude, left = false) {
         }
     }
 }
-
 
 /**
  * Shift a grid column
@@ -365,25 +637,26 @@ function column_shift(grid, idx, magnitude, up= false) {
 // 3. Dump to play area
 // 4. Start play loop, activate further hell settings
 
-const colors = new Map([
+// all my homies hate maps
+const colors = {
     // I am good with names!!!
     // https://coolors.co/palette/2f3e77-f5b841-f4ece3-2cb67d-ff4f5e-4ac6ff-ff6a3d
-    ['default', ['#2f3e77','#f5b841','#f4ece3','#2cb67d','#ff4f5e','#4ac6ff','#ff6a3d']],
+    default: ['#2f3e77', '#f5b841', '#f4ece3', '#2cb67d', '#ff4f5e', '#4ac6ff', '#ff6a3d'],
     // another I like https://coolors.co/palette/f94144-f3722c-f8961e-f9844a-f9c74f-90be6d-43aa8b-4d908e-577590-277da1
     // But I don't care for the 4th and I think the 8 and 9 are too similar to 7 and 10
     //  but I don't like how unbalanced it is if I remove all three
-    ['another_one', ['#f94144', '#f3722c', '#f8961e', '#f9844a', '#f9c74f', '#90be6d', '#43aa8b', '#4d908e', '#577590', '#277da1']],
+    another_one: ['#f94144', '#f3722c', '#f8961e', '#f9844a', '#f9c74f', '#90be6d', '#43aa8b', '#4d908e', '#577590', '#277da1'],
     // https://coolors.co/palette/001219-005f73-0a9396-94d2bd-e9d8a6-ee9b00-ca6702-bb3e03-ae2012-9b2226
     //  the reds on the end are too similar imho
-    ['another_two', ['#001219','#005f73','#0a9396','#94d2bd','#e9d8a6','#ee9b00','#ca6702','#bb3e03','#ae2012','#9b2226']],
+    another_two: ['#001219', '#005f73', '#0a9396', '#94d2bd', '#e9d8a6', '#ee9b00', '#ca6702', '#bb3e03', '#ae2012', '#9b2226'],
     // https://coolors.co/palette/8ecae6-219ebc-023047-ffb703-fb8500
     // ...is this bluey? also too small
-    ['bluey??', ['#8ecae6','#219ebc','#023047','#ffb703','#fb8500']],
+    bluey: ['#8ecae6', '#219ebc', '#023047', '#ffb703', '#fb8500'],
     // https://coolors.co/palette/ef476f-ffd166-06d6a0-118ab2-073b4c
     // too small
-    ['another_three', ["#ef476f","#ffd166","#06d6a0","#118ab2","#073b4c"]]
+    another_three: ["#ef476f", "#ffd166", "#06d6a0", "#118ab2", "#073b4c"]
     // TODO: find more I like :)
-])
+};
 
 // whitelist of the symbol set to narrow it down
 //  also you're gonna want them to not by radially symmetric in any way for certain hell modes
@@ -391,43 +664,40 @@ const colors = new Map([
 
 // require the puzzle to contain these in some form
 //  alt mode to force only from this set
-const symbols = new Map([
+const symbols = {
     // like and subscribe
-    ['subscribe', ['youtube', 'hand-thumbs-up', 'sunglasses', 'twitch']],
+    subscribe: ['youtube', 'hand-thumbs-up', 'sunglasses', 'twitch'],
     // chicken paul
-    ['paul', ['egg', 'fire', 'egg-fried']],
+    paul: ['egg', 'fire', 'egg-fried'],
     // "go to the bank and withdraw the funds" - conveniently the size of a 3x3
     //  I like chat-left-text but I feel headset is more appropriate. No office phone icon, tragically.
-    ['withdrawfunds', ['headset', 'car-front', 'bank', 'person-vcard', 'credit-card-2-back',
-        'cash-coin', 'currency-exchange', 'currency-bitcoin']],
+    withdrawfunds: ['headset', 'car-front', 'bank', 'person-vcard', 'credit-card-2-back',
+        'cash-coin', 'currency-exchange', 'currency-bitcoin'],
     // MyCoin is a very real, award-winning financial establishment I'll have you know
     //  VERY tempted to add more copies of award to bias selection
-    ['mycoin', ['currency-exchange', 'cash-coin', 'safe', 'briefcase',
+    mycoin: ['currency-exchange', 'cash-coin', 'safe', 'briefcase',
         'currency-bitcoin', 'currency-euro', 'currency-dollar', 'currency-yen', 'currency-rupee', 'currency-pound',
-        'buildings', 'bank', 'calculator', 'graph-up-arrow', 'award', 'headset']],
+        'buildings', 'bank', 'calculator', 'graph-up-arrow', 'award', 'headset'],
     // Emojos
-    ['emojis', ['emoji-grin', 'emoji-astonished', 'emoji-grimace', 'emoji-smile-upside-down',
+    emojis: ['emoji-grin', 'emoji-astonished', 'emoji-grimace', 'emoji-smile-upside-down',
         'emoji-wink', 'emoji-kiss', 'emoji-neutral', 'emoji-expressionless', 'emoji-tear', 'emoji-dizzy', 'emoji-frown',
-        'emoji-surprise', 'emoji-smile', 'emoji-heart-eyes', 'emoji-laughing', 'emoji-sunglasses', 'emoji-angry']],
+        'emoji-surprise', 'emoji-smile', 'emoji-heart-eyes', 'emoji-laughing', 'emoji-sunglasses', 'emoji-angry'],
     // Dice
-    ['dice', ['dice-1', 'dice-2', 'dice-3', 'dice-4', 'dice-5', 'dice-6']],
+    dice: ['dice-1', 'dice-2', 'dice-3', 'dice-4', 'dice-5', 'dice-6'],
     // Default whitelist from the set.
     // TODO: do
-    ['default', []]
-]);
+    default: []
+};
 
-/*
-NOTE FROM BOOTSTRAP
-<svg class="bi" width="32" height="32" fill="currentColor">
-  <use xlink:href="bootstrap-icons.svg#heart-fill"/>
-</svg>
-<svg class="bi" width="32" height="32" fill="currentColor">
-  <use xlink:href="bootstrap-icons.svg#toggles"/>
-</svg>
-<svg class="bi" width="32" height="32" fill="currentColor">
-  <use xlink:href="bootstrap-icons.svg#shop"/>
-</svg>
- */
+const affirmations = [
+    'Do it for Miller!',
+    'You can do it!',
+    'We believe in you!',
+    "Humans don't give up!",
+    'Live Laugh Slide',
+    'You still have moves left!',
+    // TODO: get more
+]
 
 function color_to_rgb(color_code) {
     const color = parseInt(color_code.slice(1), 16);
@@ -462,11 +732,6 @@ function get_nonce(len) {
     return nonce;
 }
 
-let size = 5;
-let steps = 4;
-let shuffle = 0;
-
-
 
 /**
  * Plan puzzle content. Image puzzle will disable all other content settings.
@@ -495,7 +760,7 @@ let shuffle = 0;
  * @param {boolean} exclusive_symbols - !! Only choose from selected symbol set
  * @param {null|string} single_symbol - !! Only use the symbol name provided.
  * @param {string} color_set - Color scheme to pick from.
- * @param {boolean} single_color - !! Only pick one color. TODO: have this be the color code?
+ * @param {string} single_color - !! Only use provided color code for tiles
  * @param {string} invert_symbol - Set symbol stroke to the background's inverse. One of 'always', 'dark', 'B&W', or 'never'
  * @param {boolean} rotation - Rotate symbols randomly.
  * @param {boolean} safety - Generator safety override.
@@ -504,7 +769,7 @@ let shuffle = 0;
 function plan_content({size, steps, shuffles = 0,
                       image_override= null,
                       symbol_set= 'emojis', exclusive_symbols = false, single_symbol = null,
-                      color_set = 'default', single_color = false, invert_symbol = 'always',
+                      color_set = 'default', single_color = null, invert_symbol = 'always',
                       rotation = true, safety= true, nonce = true} = {}) {
 
     if (! (size || steps)) {
@@ -513,10 +778,10 @@ function plan_content({size, steps, shuffles = 0,
 
     if (image_override == null && safety) {
         // oh baby I don't think I've used a ternary in 8 years
-        const color_total = single_color ? 1 : colors.get(color_set).length;
+        const color_total = single_color ? 1 : colors[color_set].length;
         // Good habits never die
         //  overlap of requested and default set not considered because it's tedious and you're probably fine.
-        const symbol_total = single_symbol ? 1 : exclusive_symbols ? symbols.get(symbol_set).length : symbols.get('default').length;
+        const symbol_total = single_symbol ? 1 : exclusive_symbols ? symbols[symbol_set].length : symbols.default.length;
         // I ALREADY TOLD YOU IT'S FINE! ...probably
         const rotation_total = rotation ? 36 : 1;
         if (color_total * symbol_total * rotation_total < size * size) {
@@ -535,7 +800,7 @@ function plan_content({size, steps, shuffles = 0,
     let color_pool = [];
     let symbol_pool = [];
     const symbols_exhausted = false;
-    const only_color = single_color ? colors[color_set][getRandomInt(colors[color_set].length)] : false;
+    const only_color = single_color ? single_color : false;
     const only_symbol = single_symbol ? single_symbol : false;
 
     do {
@@ -543,12 +808,12 @@ function plan_content({size, steps, shuffles = 0,
         if (color_pool.length === 0) {
             // shallow copy alert
             // You can't index a map???? why is colors[color_set] undefined
-            color_pool = only_color ? [only_color] : Array.from(colors.get(color_set));
+            color_pool = only_color ? [only_color] : Array.from(colors[color_set]);
         }
         // refill symbol pool
         if (symbol_pool.length === 0) {
             // Have I mentioned I've missed ternaries?
-            symbol_pool = only_symbol ? [only_symbol] : Array.from(symbols_exhausted ? symbols.get('default') : symbols.get(symbol_set));
+            symbol_pool = only_symbol ? [only_symbol] : Array.from(symbols_exhausted ? symbols.default : symbols[symbol_set]);
         }
         const selected_color_idx = getRandomInt(color_pool.length);
         const selected_color = color_pool[selected_color_idx];
@@ -607,11 +872,19 @@ const clickEater = document.getElementById('click-eater');
 const text_dump = document.getElementById('aa');
 
 
-let humanity_active = true;
-let humanity_nudge_cycle = 0;
-const humanity_level = document.getElementById('humanity');
-const humanity_human = document.getElementById('human-tile');
-const humanity_robot = document.getElementById('robot-tile');
+// you've got enough going on that I'm caching your objects
+const humanity = {
+    active: true,
+    cycle: 0,
+    level: 50,
+
+    track: document.getElementById('humanity-track'),
+    bar: document.getElementById('humanity'),
+    divider: document.getElementById('humanity-divider'),
+    human: document.getElementById('human-tile'),
+    robot: document.getElementById('robot-tile')
+}
+
 /**
  * Tweak humanity bar. Bar never passes 5% either end (10?).
  *  Large movement always swings in the other direction
@@ -619,16 +892,16 @@ const humanity_robot = document.getElementById('robot-tile');
  */
 function humanity_adjust(scale) {
     // the got dang rng system doesn't have distributions
-    if (humanity_active) {
+    if (humanity.active) {
         let move = getRandomInt(7);
         let recenter = false;
         switch (scale) {
             case 's':
                 // +- 10 units
-                humanity_nudge_cycle += 1;
-                if (humanity_nudge_cycle > 5 && Math.random() > 0.7) {
+                humanity.cycle += 1;
+                if (humanity.cycle > 5 && Math.random() > 0.7) {
                     recenter = true;
-                    humanity_nudge_cycle = 0;
+                    humanity.cycle = 0;
                 } else {
                     break;
                 }
@@ -645,29 +918,35 @@ function humanity_adjust(scale) {
                 recenter = true;
                 break;
         }
-        if ((recenter && uiState.humanity > 50) || Math.random() > 0.5) {
+        if ((recenter && humanity.level > 50) || Math.random() > 0.5) {
             move = -move;
         }
 
-        move = Math.max(4, Math.min(95, uiState.humanity + move));
+        move = Math.max(4, Math.min(95, humanity.level + move));
 
-        requestAnimationFrame(() => {
-            humanity_level.style.transform = `scaleX(${move}%)`;
-            humanity_robot.classList.remove('alert');
-            humanity_human.classList.remove('alert');
-            void humanity_human.offsetWidth;
-            void humanity_robot.offsetWidth;
-            if (move > 70) {
-                humanity_robot.classList.add('alert');
-            } else if (move < 25) {
-                humanity_human.classList.add('alert');
-            }
-            uiState.humanity = move;
-        });
+        humanity.level = move;
+        uiState.render.humanity = true;
+        scheduleRender();
+    }
+}
+function humanityRender() {
+    humanity.bar.style.transform = `scaleX(${humanity.level}%)`;
+
+    // THIS IS STUPID! my border scales with the object so I have to glue on another item.
+    // if I use ::after, it gets sucked into scaling somehow, so it has to be individually controlled
+    humanity.divider.style.transform = `translateX(-${humanity.track.getBoundingClientRect().width * (1 - (humanity.level / 100)) + 4}px)`;
+
+    humanity.human.classList.remove('alert');
+    humanity.robot.classList.remove('alert');
+    //void humanity_human.offsetWidth;
+    //void humanity_robot.offsetWidth;
+    if (humanity.level > 70) {
+        humanity.robot.classList.add('alert');
+    } else if (humanity.level < 25) {
+        humanity.human.classList.add('alert');
     }
 }
 function register_humanity() {
-    humanity_level.style.transform = 'scaleX(50%)';
     // FIXME: setup variable callback chain
     setInterval(() => {humanity_adjust('s')}, 3000)
 }
@@ -682,11 +961,11 @@ function button_flash(elem) {
     elem.style.animation = 'var(--button-flash-animation-params)';
 }
 
-function renderInfo() {
+function infoRender() {
     const info_items = document.getElementsByClassName('info-panel');
     const id_items = document.getElementsByClassName('container-id');
 
-    if (uiState.info) {
+    if (!uiState.info) {
         for (const item of info_items) {
             item.classList.add('active');
         }
@@ -704,23 +983,26 @@ function renderInfo() {
             item.classList.remove('active');
         }
     }
+    uiState.info = !uiState.info;
 }
 
 function register_info() {
     const info_button = document.getElementById('control-1');
     info_button.addEventListener('click', (event) => {
         event.stopPropagation(); // ?? who else could have this event
-        uiState.info = true;
+        uiState.render.info = true;
         scheduleRender();
     });
 
     clickEater.addEventListener('click', (event) => {
         if (uiState.info) {
-            uiState.info = false;
-            // WHOOPS, we need to transition state from init info to... Whatever is next. Start I guess,
+            // move to start state, ask for the quit flag to fly up.
             if (uiState.global === 'info') {
                 uiState.global = 'start';
+                reset_timer();
+                uiState.render.quit = true;
             }
+            uiState.render.info = true;
             scheduleRender();
         }
     });
@@ -732,45 +1014,54 @@ const progress_shape = 'triangle';
  * Render progress graphic - does not request frame
  */
 function progressRender() {
-    // I gotta figure out animation frames and different functions doing what.
-    //  if I request a frame inside a frame it goes to the next frame which isn't ideal.
-    // FIXME: it's still gonna blink the whole bar on update, split into build and update funcs.
-    //  tbh the blink is probably just safari
-    // FIXME: intiial state should be empty (check global ui not in load/ensure state in play for current idx)
-    if (puzzles.length > 1 && uiState.progress_update) {
+    if (puzzles.length > 1) {
         const progressContainer = document.getElementById('addon-progress');
+        if (progressContainer.childElementCount === 0) { // aka we're empty aka global info-init state
+            const empty_tile = document.createElement('div');
+            empty_tile.classList.add('tile-base');
+            const empty_symbol = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+            empty_symbol.innerHTML = `<use xlink:href="bootstrap-icons.svg#${progress_shape}"/>`;
+            empty_tile.append(empty_symbol);
 
-        progressContainer.parentElement.classList.add('show-progress');
-        uiState.progress_update = false;
-
-        progressContainer.innerHTML = '';
-        if (uiState.puzzleid !== -1) {
-            const full_tile = document.createElement('div');
-            full_tile.classList.add('tile-base');
-            const full_symbol = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-            full_symbol.innerHTML = `<use xlink:href="bootstrap-icons.svg#${progress_shape}-fill"/>`
-            full_tile.appendChild(full_symbol);
-            for (let i = 0; i < (uiState.puzzleid - 1); i++) {
-                progressContainer.appendChild(full_tile.cloneNode(true));
+            for (let i = 0; i < puzzles.length; i++) {
+                progressContainer.appendChild(empty_tile.cloneNode(true));
             }
+            progressContainer.parentElement.classList.add('show-progress');
 
-            const half_tile = document.createElement('div');
-            half_tile.classList.add('tile-base');
-            const half_symbol = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-            half_symbol.innerHTML = `<use xlink:href="bootstrap-icons.svg#${progress_shape}-half"/>`
-            half_tile.append(half_symbol)
-            progressContainer.appendChild(half_tile);
+            // we just started existing, there literally cannot be an update
+            return;
         }
 
-        const empty_tile = document.createElement('div');
-        empty_tile.classList.add('tile-base');
-        const empty_symbol = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-        empty_symbol.innerHTML = `<use xlink:href="bootstrap-icons.svg#${progress_shape}"/>`;
-        empty_tile.append(empty_symbol);
+        // ok, we were asked for an update for *SOME REASON*
+        const target_element = progressContainer.children[uiState.puzzleid];
 
-        for (let i = uiState.puzzleid < 0 ? 0 : uiState.puzzleid; i < puzzles.length - 1; i++) {
-            progressContainer.appendChild(empty_tile.cloneNode(true));
+        const final_svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        switch (uiState.global) {
+            // ...can I put code here (no)
+            case 'play':
+                // started play on current puzzle idx, partial fill
+                final_svg.innerHTML = `<use xlink:href="bootstrap-icons.svg#${progress_shape}-half"/>`;
+                break
+            case 'win':
+                // gg no re, fill
+                final_svg.innerHTML = `<use xlink:href="bootstrap-icons.svg#${progress_shape}-fill"/>`;
+                break
+            case 'lose':
+                // lmao get owned
+                final_svg.innerHTML = `<use xlink:href="bootstrap-icons.svg#${progress_shape}"/>`;
+                break
+            default:
+                // idk how you got here; please do not touch anything
+                return;
         }
+        target_element.classList.add('flip');
+        target_element.addEventListener('transitionend', function handler() {
+            // I'm told I should wipe the transitionend listener to kill any others also running BUUUT.. chaos reigns
+            target_element.replaceChildren(final_svg);
+            // I'm also told I shoudl jame it in a frame so the browser has a better chance of noticing the state change
+            //  I can do that.
+            requestAnimationFrame(() => {target_element.classList.remove('flip');});
+        });
     }
 }
 
@@ -782,21 +1073,13 @@ let initialized = false;
 function inject_controls() {
     if (!initialized) {
         initialized = true; // idk what could call this multiple times but idk what would happen if you did
-
         register_info();
-
         register_flipper();
-
         register_reset();
-
         register_quit();
-
         register_humanity();
-
         register_arrows();
-
     }
-
 }
 
 function inject_debug() {
@@ -807,56 +1090,53 @@ function inject_debug() {
 function tile_clicked(event) {
     // on click, highlight the row/col, lowlight the others.
     //  when clicking the already selected tile, clear everything.
-    const clicked_base = event.target.closest('.tile-base');
-    // const border_thickness = event.target.offsetWidth
-
-    if (clicked_base.dataset.active) {
+    const base = event.target.closest('.tile-base');
+    if (!base) {
+        // You didn't click a tile, skill issue.
+        return;
+    }
+    if (uiState.active_tile === base) {
         // kill the lights
-        uiState.active_tile = [];
-        requestAnimationFrame(() => {
-            const base_tiles = Array.from(puzzleContainer.querySelectorAll('.tile-base'));
-            base_tiles.forEach(item => {
-                // item.classList.add('disabled-hover');
-                const overlay = item.querySelector('.tile-overlay');
-                delete item.dataset.active;
-                overlay.classList.remove('highlighted', 'lowlighted', 'active-tile');
-            });
-        });
+        uiState.active_tile = null;
     }
     else {
         // highlight/lowlight
-        uiState.active_tile = [clicked_base.dataset.row, clicked_base.dataset.col];
-        requestAnimationFrame(() => {
-            const base_tiles = Array.from(puzzleContainer.querySelectorAll('.tile-base'));
-            base_tiles.forEach(item => {
-                // item.classList.add('disabled-hover');
-                const overlay = item.querySelector('.tile-overlay');
-                delete item.dataset.active;
-                overlay.classList.remove('highlighted', 'lowlighted', 'active-tile');
-                if (item.dataset.col === clicked_base.dataset.col ||
-                    item.dataset.row === clicked_base.dataset.row) {
-                    overlay.classList.add('highlighted');
-                } else {
-                    overlay.classList.add('lowlighted');
+        uiState.active_tile = base;
+    }
+    uiState.render.relight = true;
+    scheduleRender();
+}
+
+function relightRender() {
+    if (uiState.active_tile !== null) {
+        uiState.current_board.forEach((base) => {
+            const overlay = base.querySelector('.tile-overlay');
+            overlay.classList.remove('highlighted', 'lowlighted', 'active-tile');
+            if (base.dataset.row === uiState.active_tile.dataset.row ||
+                base.dataset.col === uiState.active_tile.dataset.col) {
+                overlay.classList.add('highlighted');
+                if (base === uiState.active_tile) {
+                    overlay.classList.add('active-tile');
                 }
-                delete overlay.parentElement.dataset.active;
-            });
-            clicked_base.dataset.active = "yes";
-
-            //const color = invert_style_color(clicked_base.querySelector('.puzzle-tile').style.background);
-
-            //overlay.style.outlineColor = color;
-            // event.target.style.setProperty('--active-outline-color', color);
-            event.target.classList.add('active-tile');
+            } else {
+                overlay.classList.add('lowlighted');
+            }
+        });
+    } else {
+        uiState.current_board.forEach((item) => {
+            const overlay = item.querySelector('.tile-overlay');
+            delete item.dataset.active;
+            overlay.classList.remove('highlighted', 'lowlighted', 'active-tile');
         });
     }
 }
 
 const puzzles = [
     {
-        size: size, steps: steps, shuffles: shuffle,
+        size: 5, steps: 6, shuffles: false,
         symbol_set: 'mycoin', exclusive_symbols: true,
-        color_set: 'default', invert_symbol: 'B&W', rotation: false
+        color_set: 'default', invert_symbol: 'B&W', rotation: false,
+        move_multiplier: 10
     },
     {
         size: 4, steps: 5, shuffles: false,
@@ -866,50 +1146,10 @@ const puzzles = [
 ];
 
 
-function intiializeBoard() {
-
-    // get blasted
-    puzzleContainer.innerHTML = '';
-    puzzleContainer.style.gridTemplateColumns = `repeat(${size}, 1fr)`;
-    puzzleContainer.style.gridTemplateRows = `repeat(${size}, 1fr)`;
-    puzzleContainer.style.gap = '0px';
-
-    solutionContainer.innerHTML = '';
-    solutionContainer.style.gridTemplateColumns = `repeat(${size}, 1fr)`;
-    solutionContainer.style.gridTemplateRows = `repeat(${size}, 1fr)`;
-    solutionContainer.style.gap = '0px';
-
-    for (let i = 0; i < size; i++) {
-        for (let j = 0; j < size; j++) {
-            const idx = j + (size * i);
-            // Lol a second .appendChild yoinks it away from the first parent (something something custody).
-            //  although I bet you could do some tricky stuff with that.
-            // this is the easy one, you can have the generated tile
-            solutionContainer.appendChild(tiles[idx]);
-
-            // you... are a problem
-            const base_element = document.createElement('div');
-            base_element.classList.add('tile-base');
-            base_element.dataset.col = j.toString();
-            base_element.dataset.row = i.toString();
-            base_element.dataset.index = idx.toString();
-
-            const puzzle_tile = tiles[init_map.get(idx)].cloneNode(true);
-            base_element.appendChild(puzzle_tile);
-
-            const overlay = document.createElement('div');
-            overlay.classList.add('tile-overlay');
-
-            overlay.addEventListener('click', tile_clicked)
-            base_element.appendChild(overlay);
-
-            puzzleContainer.appendChild(base_element);
-        }
-    }
-}
-
 function render_puzzle() {
     const [tiles, init_map, moves] = plan_content(puzzles[uiState.puzzleid]);
+
+    const size = puzzles[uiState.puzzleid].size;
 
     requestAnimationFrame(() => {
         // get blasted
@@ -993,30 +1233,18 @@ function register_arrows() {
             return; // why do you waste my time like this
         }
 
-        // lock up the ui instantly, it's also invisible and one change so screw frames
+        // lock up the ui instantly, it's also invisible and one change so screw frames and the renderer
         click_eater.classList.add('block'); // blocked but not active, no click events probably.
         const tile_collection = puzzleContainer.getElementsByClassName('puzzle-tile');
 
         // suck up current state
         const size = puzzles[uiState.puzzleid].size;
-        const vert = direction === 'u' || direction === 'd'
+        const vert = direction === 'u' || direction === 'd';
 
         // pull out row/col that is moving before reorg
-        const grid = [];
-        const active_row = [];
-        for (let i = 0; i < size; i++) {
-            grid[i] = [];
-            for (let j = 0; j < size; j++) {
-                const idx = j + (size*i);
-                const tile = puzzleContainer.children[idx];
-                grid[i][j] = tile.getElementsByClassName('puzzle-tile')[0];
 
-                if ((!vert && i === uiState.active_tile[0]) || (vert && j === uiState.active_tile[1])) {
-                    const idx = j + (size*i);
-                    active_row.push(puzzleContainer.children[idx]);
-                }
-            }
-        }
+        const active_row = puzzleContainer.querySelectorAll(
+            vert ? `[data-col="${uiState.active_tile.dataset.col}"]` : `[data-row="${uiState.active_tile.dataset.row}"]`);
 
         // jumble internal data
         if (vert) {

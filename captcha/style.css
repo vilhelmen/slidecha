@@ -19,6 +19,7 @@ body {
     --nicer-red: #f17e78;
     --nicer-green: #7ef178;
     --slide-timing: 0.3s;
+    --board-padding: 2px;
 
     --button-flash-animation-params: flashBrightness 0.1s linear forwards;
     --id-flash-animation-params: idFlash 0.8s linear forwards;
@@ -78,12 +79,16 @@ body {
     cursor: unset;
 }
 
-#left-container,
 #right-container {
     display: flex;
     flex-direction: column;
     height: 100%;
     width: 100%;
+}
+#left-container {
+    display: grid;
+    grid-template-rows: 234fr 66fr;
+    height: 100%;
 }
 
 .vertical-divider {
@@ -169,8 +174,12 @@ body {
 #puzzle-container,
 #solution-container {
     aspect-ratio: 1;
-    border: darkgrey groove 2px;
+    border: darkgrey groove var(--board-padding);
     background: darkgrey;
+    gap: 0;
+}
+#puzzle-container .tile-base {
+    cursor: pointer;
 }
 
 #control-container {
@@ -187,6 +196,38 @@ body {
     max-width: 100%;
     max-height: 100%;
     object-fit: contain;
+}
+
+.tile-fuzz {
+    position: absolute;
+    display: flex;
+    top: var(--board-padding);
+    left: var(--board-padding);
+    bottom: var(--board-padding);
+    right: var(--board-padding);
+    opacity: 1;
+    backdrop-filter: blur(8px);
+    z-index: 20;
+    pointer-events: auto;
+    transition: opacity 2s ease, backdrop-filter 2s 0s ease;
+    justify-content: center;
+    align-items: center;
+}
+
+.tile-fuzz.reveal {
+    opacity: 0;
+    backdrop-filter: none;
+    pointer-events: none;
+}
+/* temp style to let me break the transition */
+.tile-fuzz.noanim {
+    transition: none;
+}
+.tile-fuzz svg {
+    aspect-ratio: 1;
+    width: 40%;
+    height: 40%;
+    animation: rotateSvg 2s linear infinite;
 }
 
 .tile-base {
@@ -215,6 +256,10 @@ body {
 
     /* tbh I have no idea what this is going to do yet*/
     transition: transform 0.3s ease-out;
+}
+
+.tile-overlay {
+    pointer-events: none;
 }
 
 .control-tile {
@@ -263,6 +308,10 @@ idk!
     opacity: var(--current-base-opacity);
 }
 
+.tile-base .puzzle-tile {
+    z-index: 9;
+}
+
 .control-tile .tile-overlay {
     background: white;
 }
@@ -294,12 +343,20 @@ idk!
 #control-container {
     fill: black;
 }
+#control-container .tile-base {
+    cursor: pointer;
+}
 
 #control-1 svg,
-#control-7 svg,
-#control-9 svg {
+#control-7 svg {
     height: 65%;
-    width: 65%;
+}
+#control-9 svg {
+    height: 70%;
+}
+
+#control-5 {
+    cursor: default !important;
 }
 
 #control-3,
@@ -410,20 +467,22 @@ idk!
     fill: #666 !important;
 }
 
-#reset-confirm span {
+#reset-confirm span,
+#quit-confirm span {
     white-space: nowrap;
-    transition: right 0.3s ease-in-out;
     text-align: center;
     width: 100%;
+    user-select: none;
+}
+
+#reset-confirm span {
+    transition: right 0.3s ease-in-out;
     right: -100%;
     left: 0;
 }
 
 #quit-confirm span {
-    white-space: nowrap;
     transition: left 0.3s ease-in-out;
-    text-align: center;
-    width: 100%;
     left: -100%;
     right: 0;
 }
@@ -437,11 +496,12 @@ idk!
 }
 
 #control-9 svg {
+    transform: rotate(-45deg);
     transition: transform 0.3s ease;
 }
 
 #control-9.active svg {
-    transform: scale(-1, 1);
+    transform: rotate(-45deg) scale(-1, 1);
 }
 
 #control-1 svg,
@@ -597,14 +657,13 @@ p {
 }
 
 
-
 /* we need a place to put fake tiles to animate */
 #slide-overlay {
     position: absolute;
-    top: 2px;
-    bottom: 2px;
-    left: 2px;
-    right: 2px;
+    top: var(--board-padding);
+    bottom: var(--board-padding);
+    left: var(--board-padding);
+    right: var(--board-padding);
     overflow: hidden;
     background: transparent;
 }
@@ -621,7 +680,7 @@ p {
 /* Idk why I need gro all over I hate this so much */
 #addon-holder {
     flex-grow: 1;
-    background: aqua;
+    background: lightgray;
 }
 
 #addon-holder svg {
@@ -678,6 +737,13 @@ but lmao you can set it to 0fr which is way smarter and funny, which is the most
     transform: scaleY(-1);
 }
 
+#addon-progress > .tile-base {
+    transition: transform 0.2s linear;
+}
+#addon-progress > .tile-base.flip {
+    transform: scaleX(0);
+}
+
 /* probably toss this div eventually, god forbid it's load bearing */
 #addon-upper {
     background: lightgray;
@@ -716,12 +782,12 @@ but lmao you can set it to 0fr which is way smarter and funny, which is the most
     background: var(--nice-red);
 }
 
-.progress-fill::after {
+.progress-divider {
     content: '';
     position: absolute;
     top: 0;
-    right: 0;
-    width: 8px;
+    right: -4px;
+    width: 4px;
     height: 100%;
     background-color: lightgray;
 }
@@ -738,7 +804,8 @@ but lmao you can set it to 0fr which is way smarter and funny, which is the most
     border-radius: 0.5em;
 }
 
-#humanity {
+#humanity,
+.progress-divider {
     /* JS CANT READ THIS AAA
     width: 50%;
     */
@@ -758,6 +825,10 @@ but lmao you can set it to 0fr which is way smarter and funny, which is the most
 #robot-tile {
     fill: black;
 }
+#human-tile svg,
+#robot-tile svg {
+    z-index: 11;
+}
 
 #human-tile .blinker,
 #robot-tile .blinker {
@@ -767,6 +838,7 @@ but lmao you can set it to 0fr which is way smarter and funny, which is the most
     width: 100%;
     height: 100%;
     opacity: 0;
+    z-index: 10;
 }
 
 #human-tile.alert .blinker,
@@ -798,37 +870,77 @@ but lmao you can set it to 0fr which is way smarter and funny, which is the most
 
 #addon-lower {
     display: grid;
-    grid-template-columns: 1fr 2fr;
+    flex-direction: row;
+    grid-template-columns: 1fr 1.1fr;
     width: 100%;
 }
 
-#addon-moves svg {
-    display: block;
+#frien svg {
     aspect-ratio: 1;
-    object-fit: contain;
-    pointer-events: none;
+    height: 80%
 }
 
-#addon-moves > .tile-base {
-    flex-grow: 0;
-    flex-shrink: 1;
-    flex-basis: min-content;
-
-    aspect-ratio: 1;
-    height: 100%;
-}
 
 #addon-moves {
-    background: green;
     display: flex;
 
     box-sizing: border-box;
     justify-content: center;
     align-items: center;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+#addon-moves.flip {
+    transform: scaleY(0);
+}
+#move-icon svg {
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+#move-icon.alive #alive {
+    opacity: 1;
+}
+#move-icon.alive #dead {
+    opacity: 0;
+}
+#move-icon:not(.alive) #alive {
+    opacity: 0;
+}
+#move-icon:not(.alive) #dead {
+    opacity: 1;
 }
 
+#addon-moves span {
+    white-space: pre;
+}
+
+#move-icon,
+#timer-icon {
+    flex-grow: 0;
+    flex-shrink: 1;
+    flex-basis: min-content;
+    aspect-ratio: 1;
+    height: 60%;
+}
+
+#move-data {
+    font-size: 1.5em;
+    white-space: nowrap;
+}
+
+
 #addon-timer {
-    background: blue;
+    display: flex;
+    box-sizing: border-box;
+    justify-content: center;
+    align-items: center;
+    gap: 5%;
+    transition: opacity 0.3s ease;
+}
+/* TODO: timer wiggle */
+
+#addon-timer span {
+    font-size: 1.2em;
 }
 
 
