@@ -50,11 +50,15 @@
           <!-- get out you're crowding -->
           <!--<div id="frien" class="tile-base"><svg><use xlink:href="bootstrap-icons.svg#emoji-smile"/></svg></div>-->
           <div id="addon-timer">
-            <div id="timer-icon" class="tile-base"><svg><use xlink:href="bootstrap-icons.svg#alarm"/></svg></div>
+            <div id="timer-icon" class="tile-base stop">
+              <!--<use xlink:href="bootstrap-icons.svg#alarm"/></svg>-->
+              <svg id="run"><use xlink:href="bootstrap-icons.svg#hourglass-split"/></svg>
+              <svg id="stop"><use xlink:href="bootstrap-icons.svg#hourglass-bottom"/></svg>
+            </div>
             <span id="time" data-reset="00:00:00">00:00:00</span>
           </div>
           <div id="addon-moves">
-            <div id="move-icon" class="tile-base alive">
+            <div id="move-icon" class="tile-base">
               <svg id="alive"><use xlink:href="bootstrap-icons.svg#activity"/></svg>
               <svg id="dead"><use xlink:href="bootstrap-icons.svg#heartbreak"/></svg>
             </div>
