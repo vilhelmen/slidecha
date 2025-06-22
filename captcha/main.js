@@ -1,4 +1,6 @@
 
+// TODO: UNLOAD ON LOSE IDK WHERE TO PUT THIS I'M WORKING
+
 // does this map make my state look big?
 //  also idk what this type is oh no help
 const uiState = {
@@ -760,13 +762,17 @@ const symbols = {
 };
 
 const affirmations = [
-    'Do it for Miller!',
-    'You can do it!',
-    'We believe in you!',
-    "Humans don't give up!",
-    'Live Laugh Slide',
     'You still have moves left!',
-    // TODO: get more
+    "Humans don't give up!",
+    'You can do it!',
+
+    'Do it for Miller!',
+    'We believe in you!',
+    'Live Laugh Slide',
+    'Object [object]',
+    'Have you tried moving it to the left?',
+    '                                                   not yet!',
+    document.documentElement.innerHTML
 ]
 
 function color_to_rgb(color_code) {
@@ -845,91 +851,111 @@ function plan_content({size, steps, shuffles = 0,
     if (! (size || steps)) {
         throw new Error('size or steps must be invalid');
     }
-
-    if (image_override == null && safety) {
-        // oh baby I don't think I've used a ternary in 8 years
-        const color_total = single_color ? 1 : colors[color_set].length;
-        // Good habits never die
-        //  overlap of requested and default set not considered because it's tedious and you're probably fine.
-        const symbol_total = single_symbol ? 1 : exclusive_symbols ? symbols[symbol_set].length : symbols.default.length;
-        // I ALREADY TOLD YOU IT'S FINE! ...probably
-        const rotation_total = rotation ? 36 : 1;
-        if (color_total * symbol_total * rotation_total < size * size) {
-            throw new Error("Not enough potential tiles :(");
-        }
-    }
-
-    // RENDER NOTE BEFORE I FORGET:
-    //  style="filter: invert(1);"
-    // but also that doesn't apply to background, only color. so if we set color to background and filter doesn't work
-    //  then everything is invisible, whoops. I may be willing ot take that risk
-    const code_set = new Set()
     const tiles = [];
     const total_tiles = size * size;
 
-    let color_pool = [];
-    let symbol_pool = [];
-    const symbols_exhausted = false;
-    const only_color = single_color ? single_color : false;
-    const only_symbol = single_symbol ? single_symbol : false;
+    if (image_override !== null) {
+        // This is (clearly!) off by one but it works in all browsers so IDK!
+        const fr = 100/(size-1);
+        // screw your settings, literally none of them matter
+        for (let i = 0; i < size; i++) {
+            for (let j = 0; j < size; j++) {
+                const tile = document.createElement('div');
+                tile.classList.add('puzzle-tile');
+                tile.style.backgroundSize = `${size}00% ${size}00%`;
+                tile.style.backgroundImage =  `url('${image_override}')`;
 
-    do {
-        // refill color pool
-        if (color_pool.length === 0) {
-            // shallow copy alert
-            // You can't index a map???? why is colors[color_set] undefined
-            color_pool = only_color ? [only_color] : Array.from(colors[color_set]);
+                tile.style.backgroundPosition = `${j * fr}% ${i * fr}%`;
+                tile.dataset.index = tiles.length.toString();
+                tile.dataset.code = tile.dataset.index;
+
+                tiles.push(tile);
+            }
         }
-        // refill symbol pool
-        if (symbol_pool.length === 0) {
-            // Have I mentioned I've missed ternaries?
-            symbol_pool = only_symbol ? [only_symbol] : Array.from(symbols_exhausted ? symbols.default : symbols[symbol_set]);
+    } else {
+        if (safety) {
+            // oh baby I don't think I've used a ternary in 8 years
+            const color_total = single_color ? 1 : colors[color_set].length;
+            // Good habits never die
+            //  overlap of requested and default set not considered because it's tedious and you're probably fine.
+            const symbol_total = single_symbol ? 1 : exclusive_symbols ? symbols[symbol_set].length : symbols.default.length;
+            // I ALREADY TOLD YOU IT'S FINE! ...probably
+            const rotation_total = rotation ? 36 : 1;
+            if (color_total * symbol_total * rotation_total < size * size) {
+                throw new Error("Not enough potential tiles :(");
+            }
         }
-        const selected_color_idx = getRandomInt(color_pool.length);
-        const selected_color = color_pool[selected_color_idx];
-        const selected_symbol_idx = getRandomInt(symbol_pool.length);
-        const selected_symbol = symbol_pool[selected_symbol_idx];
-        const selected_rotation = rotation ? getRandomInt(36) * 10 : 0; // 0 - 350 in increments of 10
-        const tile_code = selected_color + '!' + selected_symbol + '!' + selected_rotation;
 
-        // unique tile or we don't care
-        if (! code_set.has(tile_code) || ! safety) {
-            const tile = document.createElement('div');
-            tile.classList.add('puzzle-tile');
-            tile.style.background = selected_color;
+        // RENDER NOTE BEFORE I FORGET:
+        //  style="filter: invert(1);"
+        // but also that doesn't apply to background, only color. so if we set color to background and filter doesn't work
+        //  then everything is invisible, whoops. I may be willing ot take that risk
+        const code_set = new Set();
 
-            const symbol = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-            if (invert_symbol === 'always' || (invert_symbol === 'dark' && color_is_dark(selected_color)) ) {
-                symbol.setAttribute('fill', selected_color);
-                // big uh-oh, if something can't do invert they will be invisible lol
-                symbol.setAttribute('filter', 'invert(1)');
-            } else if (invert_symbol === 'B&W') {
-                if (color_is_dark(selected_color)) {
-                    symbol.setAttribute('fill', 'white')
-                } else {
-                    symbol.setAttribute('fill', 'black')
+        let color_pool = [];
+        let symbol_pool = [];
+        const symbols_exhausted = false;
+        const only_color = single_color ? single_color : false;
+        const only_symbol = single_symbol ? single_symbol : false;
+
+        do {
+            // refill color pool
+            if (color_pool.length === 0) {
+                // shallow copy alert
+                // You can't index a map???? why is colors[color_set] undefined
+                color_pool = only_color ? [only_color] : Array.from(colors[color_set]);
+            }
+            // refill symbol pool
+            if (symbol_pool.length === 0) {
+                // Have I mentioned I've missed ternaries?
+                symbol_pool = only_symbol ? [only_symbol] : Array.from(symbols_exhausted ? symbols.default : symbols[symbol_set]);
+            }
+            const selected_color_idx = getRandomInt(color_pool.length);
+            const selected_color = color_pool[selected_color_idx];
+            const selected_symbol_idx = getRandomInt(symbol_pool.length);
+            const selected_symbol = symbol_pool[selected_symbol_idx];
+            const selected_rotation = rotation ? getRandomInt(36) * 10 : 0; // 0 - 350 in increments of 10
+            const tile_code = selected_color + '!' + selected_symbol + '!' + selected_rotation;
+
+            // unique tile or we don't care
+            if (!code_set.has(tile_code) || !safety) {
+                const tile = document.createElement('div');
+                tile.classList.add('puzzle-tile');
+                tile.style.background = selected_color;
+
+                const symbol = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+                if (invert_symbol === 'always' || (invert_symbol === 'dark' && color_is_dark(selected_color))) {
+                    symbol.setAttribute('fill', selected_color);
+                    // big uh-oh, if something can't do invert they will be invisible lol
+                    symbol.setAttribute('filter', 'invert(1)');
+                } else if (invert_symbol === 'B&W') {
+                    if (color_is_dark(selected_color)) {
+                        symbol.setAttribute('fill', 'white')
+                    } else {
+                        symbol.setAttribute('fill', 'black')
+                    }
                 }
+                if (rotation && selected_rotation) {
+                    symbol.style.transform = `rotate(${selected_rotation}deg)`;
+                    symbol.style.setProperty('--fixed-rotation-angle', `${selected_rotation}deg`);
+                }
+                // nothing to see here OFFICER
+                symbol.style.setProperty('--spin-duration', `${Math.random() * 5}s`);
+                symbol.style.setProperty('--spin-direction', Math.random() > 0.5 ? 'normal' : 'reverse');
+
+                symbol.innerHTML = `<use xlink:href="bootstrap-icons.svg#${selected_symbol}"/>`;
+                tile.appendChild(symbol);
+
+                tile.dataset.index = tiles.length.toString();
+                tile.dataset.code = nonce ? tile_code + '!' + get_nonce(6) : tile_code;
+
+                color_pool.splice(selected_color_idx, 1);
+                symbol_pool.splice(selected_symbol_idx, 1);
+                code_set.add(tile_code);
+                tiles.push(tile);
             }
-            if (rotation && selected_rotation) {
-                symbol.style.transform =`rotate(${selected_rotation}deg)`;
-                symbol.style.setProperty('--fixed-rotation-angle', `${selected_rotation}deg`);
-            }
-            // nothing to see here OFFICER
-            symbol.style.setProperty('--spin-duration', `${Math.random() * 5}s`);
-            symbol.style.setProperty('--spin-direction', Math.random() > 0.5 ? 'normal' : 'reverse');
-
-            symbol.innerHTML = `<use xlink:href="bootstrap-icons.svg#${selected_symbol}"/>`;
-            tile.appendChild(symbol);
-
-            tile.dataset.index = tiles.length.toString();
-            tile.dataset.code = nonce ? tile_code + '!' + get_nonce(6) : tile_code;
-
-            color_pool.splice(selected_color_idx, 1);
-            symbol_pool.splice(selected_symbol_idx, 1);
-            code_set.add(tile_code);
-            tiles.push(tile);
-        }
-    } while (tiles.length !== total_tiles);
+        } while (tiles.length !== total_tiles);
+    }
 
     // ...why do I return the grid anyway, I don't think it has any use.
     const [grid, actual_moves, pos_map] = plan_puzz(size, steps, shuffles)
@@ -1083,55 +1109,50 @@ const progress_shape = 'triangle';
  * Render progress graphic - does not request frame
  */
 function progressRender() {
-    if (puzzles.length > 1) {
-        const progressContainer = document.getElementById('addon-progress');
-        if (progressContainer.childElementCount === 0) { // aka we're empty aka global info-init state
-            const empty_tile = document.createElement('div');
-            empty_tile.classList.add('tile-base');
-            const empty_symbol = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-            empty_symbol.innerHTML = `<use xlink:href="bootstrap-icons.svg#${progress_shape}"/>`;
-            empty_tile.append(empty_symbol);
+    const progressContainer = document.getElementById('addon-progress');
+    if (progressContainer.childElementCount === 0) { // aka we're empty aka global info-init state
+        const empty_tile = document.createElement('div');
+        empty_tile.classList.add('tile-base');
+        const empty_symbol = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        empty_symbol.innerHTML = `<use xlink:href="bootstrap-icons.svg#${progress_shape}"/>`;
+        empty_tile.append(empty_symbol);
 
-            for (let i = 0; i < puzzles.length; i++) {
-                progressContainer.appendChild(empty_tile.cloneNode(true));
-            }
-            progressContainer.parentElement.classList.add('show-progress');
-
-            // we just started existing, there literally cannot be an update
-            return;
+        for (let i = 0; i < puzzles.length; i++) {
+            progressContainer.appendChild(empty_tile.cloneNode(true));
         }
-
-        // ok, we were asked for an update for *SOME REASON*
-        const target_element = progressContainer.children[uiState.puzzleid];
-
-        const final_svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-        switch (uiState.global) {
-            // ...can I put code here (no)
-            case 'play':
-                // started play on current puzzle idx, partial fill
-                final_svg.innerHTML = `<use xlink:href="bootstrap-icons.svg#${progress_shape}-half"/>`;
-                break
-            case 'win':
-                // gg no re, fill
-                final_svg.innerHTML = `<use xlink:href="bootstrap-icons.svg#${progress_shape}-fill"/>`;
-                break
-            case 'lose':
-                // lmao get owned
-                final_svg.innerHTML = `<use xlink:href="bootstrap-icons.svg#${progress_shape}"/>`;
-                break
-            default:
-                // idk how you got here; please do not touch anything
-                return;
-        }
-        target_element.classList.add('flip');
-        target_element.addEventListener('transitionend', function handler() {
-            // I'm told I should wipe the transitionend listener to kill any others also running BUUUT.. chaos reigns
-            target_element.replaceChildren(final_svg);
-            // I'm also told I shoudl jame it in a frame so the browser has a better chance of noticing the state change
-            //  I can do that.
-            requestAnimationFrame(() => {target_element.classList.remove('flip');});
-        });
+        return;
     }
+
+    // ok, we were asked for an update for *SOME REASON*
+    const target_element = progressContainer.children[uiState.puzzleid];
+
+    const final_svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    switch (uiState.global) {
+        // ...can I put code here (no)
+        case 'play':
+            // started play on current puzzle idx, partial fill
+            final_svg.innerHTML = `<use xlink:href="bootstrap-icons.svg#${progress_shape}-half"/>`;
+            break
+        case 'win':
+            // gg no re, fill
+            final_svg.innerHTML = `<use xlink:href="bootstrap-icons.svg#${progress_shape}-fill"/>`;
+            break
+        case 'lose':
+            // lmao get owned
+            final_svg.innerHTML = `<use xlink:href="bootstrap-icons.svg#${progress_shape}"/>`;
+            break
+        default:
+            // idk how you got here; please do not touch anything
+            return;
+    }
+    target_element.classList.add('flip');
+    target_element.addEventListener('transitionend', function handler() {
+        // I'm told I should wipe the transitionend listener to kill any others also running BUUUT.. chaos reigns
+        target_element.replaceChildren(final_svg);
+        // I'm also told I shoudl jame it in a frame so the browser has a better chance of noticing the state change
+        //  I can do that.
+        requestAnimationFrame(() => {target_element.classList.remove('flip');});
+    });
 }
 
 
@@ -1225,9 +1246,14 @@ function relightRender() {
  */
 const puzzles = [
     {
-        size: 3, steps: 2, shuffles: false,
+        size: 3, steps: 2,
         symbol_set: 'withdrawfunds', exclusive_symbols: true,
         invert_symbol: 'always', rotation: false
+    },
+    {
+        size: 4, steps: 2,
+        image_override: 'wwwwtsactp.png',
+        move_multiplier: 2
     },
     {
         size: 4, steps: 4, shuffles: false,

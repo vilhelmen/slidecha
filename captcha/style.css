@@ -261,6 +261,10 @@ body {
     transition: transform 0.3s ease-out;
 }
 
+.puzzle-tile {
+    background-repeat: no-repeat;
+}
+
 .tile-overlay {
     pointer-events: none;
 }
@@ -705,21 +709,10 @@ p {
 }
 
 #addon-container {
-    grid-template-rows: 0fr 1fr 2fr;
+    grid-template-rows: 0.5fr 1fr 2fr;
     flex-grow: 1;
 }
 
-
-
-/*
-ok, we only want this to render IFF there is more than one puzzle
-I was going to have two rows rules and activate a class to yoink it out and some JS to help
-but lmao you can set it to 0fr which is way smarter and funny, which is the most important part
- well that didn't work anyway because the rows resize is instant
- */
-#addon-container.show-progress {
-    grid-template-rows: 0.5fr 1fr 2fr;
-}
 #addon-progress {
     display: flex;
     flex-direction: row;
