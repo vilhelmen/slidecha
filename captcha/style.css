@@ -20,6 +20,9 @@ body {
     --nicer-green: #7ef178;
     --slide-timing: 0.3s;
     --board-padding: 2px;
+    --spin-duration: 2s;
+    --spin-direction: normal;
+    --fixed-rotation-angle: 0deg;
 
     --button-flash-animation-params: flashBrightness 0.1s linear forwards;
     --id-flash-animation-params: idFlash 0.8s linear forwards;
@@ -271,6 +274,18 @@ body {
     outline-offset: -3px;
 }
 
+/* bad news, idk why this doesn't work */
+/* worse news, I fixed it */
+#captcha-container.spinnnnn  .puzzle-tile > svg {
+    animation: spinnnnn var(--spin-duration, 2s) linear infinite var(--spin-direction, normal);
+}
+@keyframes spinnnnn {
+    /* Start from the fixed angle */
+    from { transform: rotate(var(--fixed-rotation-angle, 0deg)); }
+    /* End at the fixed angle + 360 degrees */
+    to   { transform: rotate(calc(var(--fixed-rotation-angle, 0deg) + 360deg)); }
+}
+
 /*
 idk!
 .active-tile {
@@ -290,6 +305,7 @@ idk!
     border: 1px dashed orange;*/
     object-fit: contain;
     pointer-events: none;
+    transform-origin: center;
 }
 
 .tile-base .tile-overlay {

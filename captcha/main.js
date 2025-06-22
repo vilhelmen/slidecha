@@ -400,6 +400,13 @@ function puzzleRender() {
         solutionContainer.style.gridTemplateColumns = puzzleContainer.style.gridTemplateColumns;
         solutionContainer.style.gridTemplateRows = puzzleContainer.style.gridTemplateRows;
 
+        // WELCOME TO MY PUZZLE CARNIVAL
+        if (puzzles[uiState.puzzleid].spinnnnn) {
+            captchaContainer.classList.add('spinnnnn');
+        } else {
+            captchaContainer.classList.remove('spinnnnn');
+        }
+
         // idk where you went but come back
         clickEater.classList.add('block');
 
@@ -466,8 +473,6 @@ function puzzleRender() {
             }
         }
         unload_tile();
-    } else if (uiState.global = 'lose') {
-        // dim the lights.
     }
 }
 
@@ -590,29 +595,29 @@ function plan_puzz(size = 3, shifts= 4, shuffle = 0) {
         // OH MY GOD NOW IT'S GENERATED THE SAME PAIR OF MOVES GEORGE IS GETTING UPSET
 
         if (move_hist.length > max_hist) {
-            move_hist.shift()
+            move_hist.shift();
         }
-        move_hist.push(code)
+        move_hist.push(code);
 
         // it's modular so there's a max of size-1 moves, but also we don't want 0 moves, so -1 +1
-        magnitude = getRandomInt(size - 1) + 1
+        magnitude = getRandomInt(size - 1) + 1;
         //console.log(code, magnitude)
 
         // Like I mentioned, wrap around, so if it's past the center the technical solution goes the other way
         if (magnitude <= rollover) {
-            actual_moves += magnitude
+            actual_moves += magnitude;
         } else {
-            actual_moves += magnitude - rollover
+            actual_moves += size - magnitude;
         }
 
         // Are our moves sufficiently distributed if we skip the opposite direction?
         //  We cut off the symmetric part so... yes? Ignoring things that approach analyzing the underlying known-bad RNG
         if (vert) {
             // that's... columns
-            column_shift(grid, position, magnitude)
+            column_shift(grid, position, magnitude);
         } else {
             // the other one :)
-            row_shift(grid, position, magnitude)
+            row_shift(grid, position, magnitude);
         }
     }
 
@@ -906,8 +911,13 @@ function plan_content({size, steps, shuffles = 0,
                 }
             }
             if (rotation && selected_rotation) {
-                symbol.setAttribute('transform', `rotate(${selected_rotation})`);
+                symbol.style.transform =`rotate(${selected_rotation}deg)`;
+                symbol.style.setProperty('--fixed-rotation-angle', `${selected_rotation}deg`);
             }
+            // nothing to see here OFFICER
+            symbol.style.setProperty('--spin-duration', `${Math.random() * 5}s`);
+            symbol.style.setProperty('--spin-direction', Math.random() > 0.5 ? 'normal' : 'reverse');
+
             symbol.innerHTML = `<use xlink:href="bootstrap-icons.svg#${selected_symbol}"/>`;
             tile.appendChild(symbol);
 
@@ -928,6 +938,7 @@ function plan_content({size, steps, shuffles = 0,
 
 const puzzleContainer = document.getElementById('puzzle-container');
 const solutionContainer = document.getElementById('solution-container');
+const captchaContainer = document.getElementById('captcha-container');
 
 // OH IM STILLLL IN A DREEAAAAM
 const clickEater = document.getElementById('click-eater');
@@ -1205,17 +1216,30 @@ function relightRender() {
     }
 }
 
+/**
+ * Array of puzzles to iterate through for challenge
+ * See plan_content for primary members
+ * Extra features:
+ *  @param {number} move_multiplier - Set the move limit to this multiplier of the required moves. Yes you can go lower (rounds down(?))
+ *  @param {boolean} spinnnnn - spiiiiiinnnnnnnnnn
+ */
 const puzzles = [
     {
-        size: 5, steps: 6, shuffles: false,
-        symbol_set: 'mycoin', exclusive_symbols: true,
-        color_set: 'default', invert_symbol: 'B&W', rotation: false,
-        move_multiplier: 1.25
+        size: 3, steps: 2, shuffles: false,
+        symbol_set: 'paul', exclusive_symbols: true,
+        color_set: 'bluey', invert_symbol: 'dark', rotation: true,
     },
     {
-        size: 4, steps: 5, shuffles: false,
+        size: 5, steps: 3, shuffles: false,
+        symbol_set: 'mycoin', exclusive_symbols: true,
+        color_set: 'default', invert_symbol: 'B&W', rotation: false,
+        move_multiplier: 2
+    },
+    {
+        size: 4, steps: 2, shuffles: false,
         symbol_set: 'subscribe', exclusive_symbols: true,
-        color_set: 'another_three', invert_symbol: true, rotation: true
+        color_set: 'another_three', invert_symbol: 'always', rotation: true,
+        move_multiplier: 1, spinnnnn: true
     }
 ];
 
@@ -1355,7 +1379,7 @@ function checkMove() {
         won &= tile.firstElementChild.dataset.code === solutionContainer.children[i].dataset.code
     }
 
-    if (won || uiState.move >= uiState.total_moves) {
+    if (won || (uiState.total_moves !== -1 && uiState.move >= uiState.total_moves)) {
         // technically it could be *gasp* off for a frame or so otherwise
         clickEater.classList.add('active', 'block');
 
@@ -1372,6 +1396,8 @@ function checkMove() {
         // This got a little too complex so it has an extra lose state
         uiState.quit =  won ? 'start' : 'lose';
         uiState.render.moves = true;
+        uiState.active_tile = null;
+        uiState.render.relight = true;
         uiState.render.progress = true;
         scheduleRender();
     }
