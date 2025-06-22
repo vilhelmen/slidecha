@@ -199,7 +199,7 @@ function quitRender() {
         case 'start':
             quit_button.classList.add('start');
             quit_slider.classList.add('start');
-            if (uiState.puzzleid === 0) {
+            if (uiState.global === 'start') {
                 span.innerText = 'Click to begin';
             } else {
                 span.innerText = 'Next';
@@ -1226,17 +1226,17 @@ function relightRender() {
 const puzzles = [
     {
         size: 3, steps: 2, shuffles: false,
-        symbol_set: 'paul', exclusive_symbols: true,
-        color_set: 'bluey', invert_symbol: 'dark', rotation: true,
+        symbol_set: 'withdrawfunds', exclusive_symbols: true,
+        invert_symbol: 'always', rotation: false
     },
     {
-        size: 5, steps: 3, shuffles: false,
+        size: 4, steps: 4, shuffles: false,
         symbol_set: 'mycoin', exclusive_symbols: true,
         color_set: 'default', invert_symbol: 'B&W', rotation: false,
-        move_multiplier: 2
+        move_multiplier: 1.5
     },
     {
-        size: 4, steps: 2, shuffles: false,
+        size: 5, steps: 5, shuffles: false,
         symbol_set: 'subscribe', exclusive_symbols: true,
         color_set: 'another_three', invert_symbol: 'always', rotation: true,
         move_multiplier: 1, spinnnnn: true
@@ -1380,6 +1380,9 @@ function checkMove() {
     }
 
     if (won || (uiState.total_moves !== -1 && uiState.move >= uiState.total_moves)) {
+        // kill timer - stop will call a final render
+        stop_timer();
+
         // technically it could be *gasp* off for a frame or so otherwise
         clickEater.classList.add('active', 'block');
 
@@ -1387,10 +1390,17 @@ function checkMove() {
         // ... actually we do kinda have to hit the start state so these are in the way
         uiState.global = won ? 'win' : 'lose';
 
-        // kill timer - stop will call a final render
-        //  tbh I'd like to flash it and the move state green in some way. Or maybe just a green bg
-        //  but hooooooooo boy am I looking at the end and gettin antsy
-        stop_timer();
+        if (!won) {
+            // owned, owned, lose 80% to full and lose your cycle swing progress
+            humanity.level += Math.ceil(0.8 * (100 - humanity.level))
+            humanity.cycle = 0;
+        } else {
+            // congrats I guess, not like it was hard or whatever
+            humanity.level -= Math.floor(0.1 * (100 - humanity.level))
+        }
+
+        uiState.render.humanity = true;
+
         // lock the ui up with a quit gate
         uiState.render.quit = true;
         // This got a little too complex so it has an extra lose state
