@@ -4,6 +4,14 @@ body {
     padding: 0;
     font-family: sans-serif;
     font-size: 0.9em;
+
+    /* for legal reasons I don't think I'm allowed to say how I feel about the implementors behind this */
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none; /* lol WebStorm saying this isn't real take that *checks notes* Konqueror */
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
 }
 
 :root {
@@ -52,7 +60,6 @@ body {
 
     opacity: 0;
     cursor: pointer;
-    user-select: none;
     background: transparent;
 
     pointer-events: none;
@@ -80,6 +87,9 @@ body {
     /* ok so turns out setting this to none just means click through, not block */
     pointer-events: auto;
     cursor: unset;
+}
+#click-eater.loser {
+    z-index: 35;
 }
 
 #right-container {
@@ -251,7 +261,6 @@ body {
     justify-content: center;
     align-items: center;
     box-sizing: border-box;
-    user-select: none;
     aspect-ratio: 1;
     height: 100%;
     min-height: 0;
@@ -450,7 +459,6 @@ idk!
     display: flex;
     justify-content: center;
     align-items: center;
-    user-select: none;
     height: 100%;
     width: 0;
     overflow: hidden;
@@ -492,7 +500,6 @@ idk!
     white-space: nowrap;
     text-align: center;
     width: 100%;
-    user-select: none;
 }
 
 #reset-confirm span {
@@ -584,7 +591,6 @@ idk!
     outline-offset: -4px;
 
     pointer-events: none;
-    user-select: none;
 }
 p {
     /* idk man I just wanna put words on the page */

@@ -1,6 +1,4 @@
 
-// TODO: UNLOAD ON LOSE IDK WHERE TO PUT THIS I'M WORKING
-
 // does this map make my state look big?
 //  also idk what this type is oh no help
 const uiState = {
@@ -19,7 +17,7 @@ const uiState = {
         humanity: true, // update humanity level
         puzzle: false, // update puzzle state
 
-        tile_time: 10, // ms to fake load a tile
+        tile_time: 100, // ms to fake load a tile
         do_reset: false, // reset puzzle board to start
 
         // jk, slides are wrangled by the arrow handler because they're ~complicated~
@@ -441,7 +439,8 @@ function puzzleRender() {
             }
         }
         load_tile();
-    } else if (uiState.render.do_reset) {
+    }
+    else if (uiState.render.do_reset) {
         // lmao you're gonna regret it
         clickEater.classList.add('block');
 
@@ -466,12 +465,27 @@ function puzzleRender() {
 
         // well I actually wanted this to remove them off then end of the grid
         //  but they don't go out right because we loaded fancy
-        function unload_tile() {
+        function reload_tiles() {
             puzzleContainer.firstChild.remove();
             if (puzzleContainer.childElementCount === 0) {
                 setTimeout(() => {requestAnimationFrame(reload_tile)}, uiState.render.tile_time)
             } else {
-                setTimeout(() => {requestAnimationFrame(unload_tile)}, uiState.render.tile_time)
+                setTimeout(() => {requestAnimationFrame(reload_tiles)}, uiState.render.tile_time)
+            }
+        }
+        reload_tiles();
+    }
+    else if (uiState.global === 'lose') {
+        // haha
+        // crank it up a few more z notches to block the next button
+        clickEater.classList.add('loser');
+
+        function unload_tile() {
+            puzzleContainer.children[getRandomInt(puzzleContainer.childElementCount)].remove();
+            if (puzzleContainer.childElementCount !== 0) {
+                setTimeout(() => {requestAnimationFrame(unload_tile)}, uiState.render.tile_time);
+            } else {
+                clickEater.classList.remove('loser'); // but we all know it to be true
             }
         }
         unload_tile();
@@ -702,12 +716,6 @@ function rotate(array, forward = true) {
     }
 
 }
-
-// ALRIGHT. We need to:
-// 1. generate the puzzle. This is easy. Tragically I've already finished it (probably)
-// 2. Figure out ~art~ modes and gen HTML/CSS for slots. Image, symbols+colors, hell modes.
-// 3. Dump to play area
-// 4. Start play loop, activate further hell settings
 
 // all my homies hate maps
 const colors = {
@@ -1420,6 +1428,7 @@ function checkMove() {
             // owned, owned, lose 80% to full and lose your cycle swing progress
             humanity.level += Math.ceil(0.8 * (100 - humanity.level))
             humanity.cycle = 0;
+            uiState.render.puzzle = true; // Mods, unload his tiles
         } else {
             // congrats I guess, not like it was hard or whatever
             humanity.level -= Math.floor(0.1 * (100 - humanity.level))
@@ -1437,9 +1446,6 @@ function checkMove() {
         uiState.render.progress = true;
         scheduleRender();
     }
-}
-
-function end_lock() {
 }
 
 function register_arrows() {
@@ -1479,24 +1485,3 @@ function register_arrows() {
         arrowhandler(event, 'r');
     });
 }
-
-/*
-DUMP FROM NOTES:
-
-Slider
-
-Configurable:
-* Size
-* Soln Length
-* Image
-* Max move multiplier
-* Piece shuffler - makes impossible?
-* Generation time (. . . Go, each 1/4 of time arg)
-* Slide time option to make it incredibly slow
-* Default is symbols/colors? Single symbol mode that does rotation. Default also does rotation but symbol is unique? Color similarity mode?
-
-Reset button does not refund moves, goes back to original layout. Only running out regenerates
-have the button that makes a new puzzle go "you still have moves, don't give up :)"
-
-render a little overlay on the solution to show which are correct? little checkmark or x in the corner?
-*/
