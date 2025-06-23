@@ -39,7 +39,7 @@
         <div id="addon-progress"></div>
         <div id="addon-upper">
           <div id="addon-humanity">
-            <!-- I can't believe I'm optimizing this little... ANYWAY this damn blinker is makinging my mac burn my fingertops -->
+            <!-- I can't believe I'm optimizing this little... ANYWAY this damn blinker is making my mac burn my fingertops -->
             <div class="tile-base" id="robot-tile"><svg id="robot"><use xlink:href="bootstrap-icons.svg#robot"/></svg><div class="blinker"></div></div>
             <div id="humanity-track" class="progress-track"><div id="humanity" class="progress-fill"></div><div id="humanity-divider" class="progress-divider"></div></div>
             <div class="tile-base" id="human-tile"><svg id="human"><use xlink:href="bootstrap-icons.svg#person-arms-up"/></svg><div class="blinker"></div></div>
@@ -68,14 +68,10 @@
         </div>
 
       </div>
-      <div id="affirmations" hidden>UGH FIGURE THIS OUT LATER</div>
+      <div id="affirmation"><span></span></div>
       <div class="container-id"><svg><use xlink:href="bootstrap-icons.svg#heart-pulse"/></svg></div>
       <div class="info-panel"><div class="info-body"><p>Your HumanRank™, elapsed time, progress, and moves are shown here; don't run out!</p></div></div>
     </div>
-    <!-- person svg ====== robot svg have it swing percentages across the bar semi-arbitrarily. Also on click-->
-    <!-- Timer that just goes up and gets red human-robot bar constantly drains and only goes up on puzzle move? -->
-    <!-- omg omg omg interrupt and lock if robot level is too log/too long and make them do something else, traditional captcha? -->
-    <!-- condescending emotional support -->
   </div>
   <div class="vertical-divider"></div>
   <div id="right-container">
@@ -137,6 +133,8 @@
             <div class="control-tile">
               <svg id="quit-icon"><use xlink:href="bootstrap-icons.svg#eject"/></svg>
               <svg id="play-icon"><use xlink:href="bootstrap-icons.svg#play"/></svg>
+              <!-- trophy ? check2-all check2-circe check2 check-lg check-circle check-circle-fill -->
+              <svg id="win-icon"><use xlink:href="bootstrap-icons.svg#check-circle-fill"/></svg>
               <div class="tile-overlay"></div>
               <div id="quit-confirm"><span>Try Again?</span></div>
             </div>
@@ -171,25 +169,9 @@
 </div>
 
   <script type="text/javascript" src="main.js"></script>
-
   <script type="text/javascript">
-    (function(window, document){
-      // This is how you tell the parent window that the CAPTCHA was successful.
-      function captchaSuccess() {
-        window.top.postMessage("success", '*');
-      }
-
-      inject_controls();
-
-      // render_puzzle();
-      scheduleRender();
-
-      // Your CAPTCHA code goes here, we've added a simple example below:
-
-      document.getElementById('solve')
-           .addEventListener('click', () => captchaSuccess());
-
-    })(window, document);
+    inject_controls();
+    scheduleRender();
   </script>
 </body>
 </html>

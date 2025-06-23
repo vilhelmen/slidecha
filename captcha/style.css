@@ -36,6 +36,7 @@ body {
     --id-flash-animation-params: idFlash 0.8s linear forwards;
     --jump-animation-params: jump 1.5s linear forwards infinite;
     --jump2-animation-params: jump2 1.5s linear forwards infinite;
+    /*--win-waggle-animation-params: winwag 1.5s linear forwards infinite;*/
 }
 
 #captcha-container {
@@ -392,7 +393,8 @@ idk!
 #control-7 {
     fill: var(--nice-red);
 }
-#control-7.start {
+#control-7.start,
+#control-7.win {
     background-color: var(--nicer-green);
     fill: #666;
 }
@@ -479,6 +481,7 @@ idk!
     left: 100%;
 }
 
+/* these really should just be control-X.active #quit-confirm but I'm not fixing it */
 #reset-confirm.active,
 #quit-confirm.active {
     visibility: visible;
@@ -489,7 +492,9 @@ idk!
     transition: background-color 0.3s ease, opacity 0.3s ease, width 0.3s ease-in-out, visibility 0s;
 }
 #quit-confirm.start,
-#control-7.start.active .control-tile {
+#quit-confirm.win,
+#control-7.start.active .control-tile,
+#control-7.win.active .control-tile {
     background-color: var(--nicer-green) !important;
     color: #666 !important;
     fill: #666 !important;
@@ -551,16 +556,26 @@ idk!
     /* ugh whatever just make another */
     animation: var(--jump2-animation-params) paused;
 }
+/*#win-icon {
+    animation: var(--win-waggle-animation-params) paused;
+}*/
 
-#control-7.start #quit-icon {
+#control-7.start #quit-icon,
+#control-7.start #win-icon {
     display: none;
 }
-#control-7:not(.start) #play-icon {
+#control-7:not(.start) #play-icon,
+#control-7:not(.start):not(.win) #win-icon {
+    display: none;
+}
+#control-7.win #play-icon,
+#control-7.win #quit-icon {
     display: none;
 }
 
-#control-7.active:not(.start) #quit-icon,
-#control-7.start.active #play-icon {
+#control-7.active:not(.start):not(.win) #quit-icon,
+#control-7.start.active:not(.win) #play-icon,
+#control-7.active.win #win-icon {
     animation-play-state: running;
 }
 
@@ -576,6 +591,12 @@ idk!
     8% {transform: translateX(12%);}
     90% {transform: translateX(-12%);}
 }
+/* well that's confusing to look at
+@keyframes winwag {
+    1%% {transform: rotate(-30deg)}
+    30% {transform: rotate(30deg)}
+}
+*/
 
 .info-panel {
     position: absolute;
@@ -890,9 +911,63 @@ p {
     width: 100%;
 }
 
+
+/*
+sorry but he got cut for UI space (simply gotta have 99 hours and 999 move support)
+It was going to be an emoji that cycled randomly from the set when an arrow was clicked
+but if you ever lost he permanently died
+
+In theory you could use the center control or remove the ui flip button
+*/
 #frien svg {
     aspect-ratio: 1;
     height: 80%
+}
+
+/* welcome back reset-confirm, you literally never left */
+#affirmation {
+    position: absolute;
+    visibility: hidden;
+    background-color: var(--nice-red);
+    color: white;
+    display: flex;
+    align-items: center;
+    height: 100%;
+    width: 0;
+    right: 0;
+    top: 0;
+    overflow: hidden;
+
+    /* idk what we're at over here but it ain't 20*/
+    z-index: 20;
+
+    /*opacity: 0;*/
+    pointer-events: none;
+    transition: background-color 0.3s ease, opacity 0.3s ease, width 0.3s ease-in-out, visibility 0s 0.3s;
+}
+#affirmation.active {
+    visibility: visible;
+    pointer-events: auto;
+    z-index: 50; /* lol that'll do it */
+    background-color: var(--nice-red);
+    width: 100%;
+    transition: background-color 0.3s ease, opacity 0.3s ease, width 0.3s ease-in-out, visibility 0s;
+}
+#affirmation span {
+    position: relative;
+    white-space: pre;
+    font-size: 2em;
+    left: 0;
+    display: inline-block;
+}
+#affirmation.active span {
+    animation: affirm 1 10s linear running forwards;
+}
+
+@keyframes affirm {
+    0% {left: 100%;}
+    /* if I don't use something GPU accelerated it's gonna run like ass and burn down the rainforest */
+    100% {transform: translateX(-100%);}
 }
 
 

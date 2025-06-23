@@ -2,8 +2,8 @@
 // does this map make my state look big?
 //  also idk what this type is oh no help
 const uiState = {
-    global: 'info', // info -> start -> load -> play -> (win/lose) -> (load/exit)
-    quit: 'start', // start, off, waiting
+    global: 'info', // info -> start -> load -> play -> (win/lose) -> (null/load)
+    quit: 'start', // start, off, waiting, lose, exit
     reset: 'off', // off, waiting
     info: false, // info is currently up
     // timer controls have escaped containment
@@ -16,8 +16,9 @@ const uiState = {
         progress: true, // update progress state
         humanity: true, // update humanity level
         puzzle: false, // update puzzle state
+        reaffirm: false, // you can do it (:
 
-        tile_time: 100, // ms to fake load a tile
+        tile_time: 150, // ms to fake load a tile
         do_reset: false, // reset puzzle board to start
 
         // jk, slides are wrangled by the arrow handler because they're ~complicated~
@@ -62,6 +63,7 @@ function renderQueue() {
 
     if (uiState.render.info) {uiState.render.info = false; infoRender();}
     if (uiState.render.quit) {uiState.render.quit = false; quitRender();}
+    if (uiState.render.reaffirm) {uiState.render.reaffirm = false; affirmRender();}
     if (uiState.render.reset) {uiState.render.reset = false; resetRender();}
     if (uiState.render.flip) {uiState.render.flip = false; flipRender();}
     if (uiState.render.humanity) {uiState.render.humanity = false; humanityRender();}
@@ -216,10 +218,8 @@ function quitRender() {
             }
             break;
         case 'exit':
-            // TODO: dig up checkmark graphic for win, wire click handler.
-            quit_button.classList.add('win');
-            quit_button.classList.add('win');
-            // FADE OF SHAME
+            quit_button.classList.add('win', 'active');
+            quit_slider.classList.add('win', 'active');
             clickEater.classList.remove('active', 'block');
             span.innerText = 'Click to submit';
             break;
@@ -228,14 +228,11 @@ function quitRender() {
             quit_slider.classList.remove('active', 'start');
             // (we technically don't need block because clickEater will only turn off itself iff we're in waiting)
             clickEater.classList.remove('active', 'reset', 'block');
-            // FIXME: this will immediately reset on first click, need intermediary state?
-            //  WONTFIX: I can't be convinced to care that much with the deadline this close
-            //   and rapid clicking can screw up any state tracking w/o tight animation timing tuning
             quit_slider.firstElementChild.innerText = 'New puzzle?';
             break;
         case 'lose':
             span.innerText = 'Try again.';
-            // YES I KNOW WEBSTORM FALLTHROUGH (it's the word fallthough that makes it stop lighting up??)
+        // YES I KNOW WEBSTORM FALLTHROUGH (it's the word fall that makes it stop lighting up??)
         case 'waiting':
             quit_button.classList.add('active');
             quit_slider.classList.add('active');
@@ -246,7 +243,6 @@ function quitRender() {
             }
             break;
     }
-
 }
 
 function register_quit() {
@@ -263,16 +259,22 @@ function register_quit() {
                 uiState.quit = 'waiting';
                 break;
             case 'exit':
-                // TODO: exit hook
+                // haha eat pant I don't need to maintain state anymore
+                window.top.postMessage("success", '*')
+                // ...but I will. kinda. it'll animate something at least to look at
+                uiState.quit = 'off';
+                humanity.active = false;
+                // I don't have a good way to lock the UI more from here without adding states.
+                // I didn't even use the exit state
                 break;
             case 'lose':
             case 'waiting':
                 // requested new puzzle, wreck up the place or get annoying
                 if (uiState.global === 'win' || uiState.global === 'lose') {
-                    // Uhhhhh this will skip the start state which is probably fine.....
                     puzzleCycle();
                 } else {
-                    // TODO: do nag affirmation
+                    // GET AFFIRMED, LOSER
+                    uiState.render.reaffirm = true;
                 }
                 uiState.quit = 'off';
         }
@@ -336,7 +338,7 @@ function register_reset() {
         scheduleRender();
     });
 
-    clickEater.addEventListener('click', (event) => {
+    clickEater.addEventListener('click', () => {
         // event.stopPropagation(); // the click can fall through?? this doesn't seem right at all tbh.
         // actually that seems bad I have like 5 listeners for this object.
 
@@ -352,7 +354,6 @@ function register_reset() {
 function flipRender() {
     // no, I will not be naming these consistently, thank you.
     const flip_button = document.getElementById('control-9');
-    const svg_element = flip_button.getElementsByTagName('svg')[0];
 
     const dyn_left = document.getElementById('dynamic-top-left');
     const puzzle_holder = document.getElementById('puzzle-holder');
@@ -441,6 +442,7 @@ function puzzleRender() {
         load_tile();
     }
     else if (uiState.render.do_reset) {
+        uiState.render.do_reset = false; // cool bug lol
         // lmao you're gonna regret it
         clickEater.classList.add('block');
 
@@ -493,6 +495,29 @@ function puzzleRender() {
 }
 
 
+function affirmRender() {
+    // lock, darken
+    clickEater.classList.add('active', 'block', 'reset');
+
+    const affirmBody = document.getElementById('affirmation');
+    // IM TOO DUMB TO KNOW WHAT AN ELEMENT AND A NODE ARE WHY IS THIS HARD
+    const affirmSpan = affirmBody.firstChild;
+
+    // Call me beep me if you wanna affirm me
+    affirmSpan.innerText = affirmations[getRandomInt(affirmations.length)];
+
+    affirmBody.classList.add('active');
+    affirmSpan.addEventListener('animationend', () => {
+        // ...what does active do anyway
+        //  lol why does it do opacity but not block what was I doing I'm not fixing it
+        requestAnimationFrame(() => {
+            clickEater.classList.remove('active', 'block', 'reset');
+            affirmBody.classList.remove('active');
+        });
+    }, {once: true});
+}
+
+
 /**
  * Generate new puzzle, setup state to be rendered, request it.
  * Moves state to load for locked render loop
@@ -529,10 +554,6 @@ function puzzleCycle() {
         // GET IN THE DIV
         const base_element = document.createElement('div');
         base_element.classList.add('tile-base');
-        // FIXME: remove? but I kinda need some orientation for clicking
-        //  but then I have to keep updating it when moving....?
-        //  this is why I wanted to only move the tiles but idk!!
-        //  ...I could still do that?
         base_element.dataset.row = i.toString();
         base_element.dataset.col = j.toString();
         base_element.dataset.index = remap_idx.toString();
@@ -771,16 +792,18 @@ const symbols = {
 
 const affirmations = [
     'You still have moves left!',
-    "Humans don't give up!",
+    "Real humans don't give up that easy!",
     'You can do it!',
 
     'Do it for Miller!',
-    'We believe in you!',
+    'Believe in the us that believes in you!',
+    'Help us help you help us all!',
     'Live Laugh Slide',
     'Object [object]',
     'Have you tried moving it to the left?',
-    '                                                   not yet!',
-    document.documentElement.innerHTML
+    'Up, maybe?',
+    '                                                   Not yet!',
+    document.documentElement.innerHTML.replace(/([\r\n])/g, '')
 ]
 
 function color_to_rgb(color_code) {
@@ -794,7 +817,7 @@ function color_is_dark(color_code) {
     return (r + g + b) / 3 < 128
 }
 
-
+// FIXME: replace invert() before I forget AGAIN
 function invert_style_color(color_string) {
     // ...colors coming out of .style are rgb(a??)()
     const parts = color_string.match(/\d+/g); // Extracts numbers
@@ -844,7 +867,7 @@ function get_nonce(len) {
  * @param {boolean} exclusive_symbols - !! Only choose from selected symbol set
  * @param {null|string} single_symbol - !! Only use the symbol name provided.
  * @param {string} color_set - Color scheme to pick from.
- * @param {string} single_color - !! Only use provided color code for tiles
+ * @param {null|string} single_color - !! Only use provided color code for tiles
  * @param {string} invert_symbol - Set symbol stroke to the background's inverse. One of 'always', 'dark', 'B&W', or 'never'
  * @param {boolean} rotation - Rotate symbols randomly.
  * @param {boolean} safety - Generator safety override.
@@ -1050,9 +1073,9 @@ function humanityRender() {
         humanity.human.classList.add('alert');
     }
 }
-function register_humanity() {
-    // FIXME: setup variable callback chain
-    setInterval(() => {humanity_adjust('s')}, 3000)
+function humanityLoop() {
+    // 2 - 5s
+    setTimeout(() => {humanity_adjust('s'); humanityLoop()}, ((Math.random() * 3) + 2)*1000);
 }
 
 /**
@@ -1098,7 +1121,7 @@ function register_info() {
         scheduleRender();
     });
 
-    clickEater.addEventListener('click', (event) => {
+    clickEater.addEventListener('click', () => {
         if (uiState.info) {
             // move to start state, ask for the quit flag to fly up.
             if (uiState.global === 'info') {
@@ -1175,7 +1198,7 @@ function inject_controls() {
         register_flipper();
         register_reset();
         register_quit();
-        register_humanity();
+        humanityLoop();
         register_arrows();
         // idk where else to put you
         puzzleContainer.addEventListener('click', tile_clicked);
@@ -1264,17 +1287,17 @@ const puzzles = [
         move_multiplier: 2
     },
     {
-        size: 4, steps: 4, shuffles: false,
+        size: 4, steps: 3, shuffles: false,
         symbol_set: 'mycoin', exclusive_symbols: true,
         color_set: 'default', invert_symbol: 'B&W', rotation: false,
         move_multiplier: 1.5
     },
-    {
+    /*{
         size: 5, steps: 5, shuffles: false,
         symbol_set: 'subscribe', exclusive_symbols: true,
         color_set: 'another_three', invert_symbol: 'always', rotation: true,
         move_multiplier: 1, spinnnnn: true
-    }
+    }*/
 ];
 
 
@@ -1326,7 +1349,7 @@ function slideRender() {
     const slide_copy = active_row.at(direction === 'u' || direction === 'l' ? 0 : -1).cloneNode(true);
     // haha big brain am winning again, I only need to slide the entire div, not each member.
     //  lmao it incredibly will NOT work that way
-    let tx = 'idk im dumb!'
+    let tx = 'idk im dumb!';
     if (vert) {
         const tile_rect = active_row.at(direction === 'u' ? -1 : 0).getBoundingClientRect();
         slide_copy.style.left = `${tile_rect.left - overlay_rect.left}px`;
@@ -1439,7 +1462,7 @@ function checkMove() {
         // lock the ui up with a quit gate
         uiState.render.quit = true;
         // This got a little too complex so it has an extra lose state
-        uiState.quit =  won ? 'start' : 'lose';
+        uiState.quit =  won ? uiState.puzzleid === puzzles.length - 1 ? 'exit' : 'start' : 'lose';
         uiState.render.moves = true;
         uiState.active_tile = null;
         uiState.render.relight = true;
@@ -1453,7 +1476,6 @@ function register_arrows() {
     const down = document.getElementById('control-8');
     const left = document.getElementById('control-4');
     const right = document.getElementById('control-6');
-    const slide_overlay = document.getElementById('slide-overlay')
 
     function arrowhandler(event, direction) {
         if (uiState.active_tile === null) {
