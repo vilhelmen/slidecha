@@ -117,7 +117,7 @@ const symbols = {
     // chicken paul
     paul: ['egg', 'fire', 'egg-fried'],
     // "go to the bank and withdraw the funds" - conveniently the size of a 3x3
-    //  I like chat-left-text but I feel headset is more appropriate. No office phone icon, tragically.
+    // I am very proud of this subliminal messaging and I suggest you do your own. No office phone icon, tragically.
     withdrawfunds: ['headset', 'chat-left-text', 'car-front', 'bank', 'person-vcard', 'credit-card-2-back',
         'cash-coin', 'currency-exchange', 'currency-bitcoin'],
     // MyCoin is a very real, award-winning financial establishment I'll have you know
@@ -187,7 +187,7 @@ const puzzles = [
         symbol_set: 'paul', exclusive_symbols: true,
         color_set: 'bluey', move_multiplier: 1, rotation: true
     },
-    {
+    { // my runner up for fav, only because I had to add the protector to show it off
         size: 3, steps: 2,
         symbol_set: 'withdrawfunds', exclusive_symbols: true,
         invert_symbol: 'always', rotation: false,
@@ -203,7 +203,7 @@ const puzzles = [
         symbol_set: 'emoji', rotation: false,
         protect: 'b', protect_pattern: 'spotlight'
     },
-    {
+    { // A good "sane" puzzle example. Moves may be a little low though.
         size: 4, steps: 3,
         symbol_set: 'mycoin', exclusive_symbols: true,
         invert_symbol: 'B&W', rotation: false,
