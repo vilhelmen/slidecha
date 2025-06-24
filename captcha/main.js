@@ -1,8 +1,7 @@
-
 // does this map make my state look big?
 //  also idk what this type is oh no help
 const uiState = {
-    global: 'info', // info -> start -> load -> play -> (win/lose) -> (null/load)
+    global: 'info', // info -> start -> load -> play -> (win/lose) -> ([there is no end state]]/load)
     quit: 'start', // start, off, waiting, lose, exit
     reset: 'off', // off, waiting
     info: false, // info is currently up
@@ -22,9 +21,12 @@ const uiState = {
         do_reset: false, // reset puzzle board to start
 
         // jk, slides are wrangled by the arrow handler because they're ~complicated~
-        // JK ITS BACK I HATE RENDERING
+        // JK IT'S BACK I HATE RENDERING
         slide: false, // so slide anim
         slide_direction: null, // direction code
+
+        can_protect: false, // the protector file was loaded (SAFARI I SWEAR TO GOD)
+        protector: null, // callback id
 
         relight: false, // fiddle with tile lighting
         moves: false // update move count
@@ -80,7 +82,8 @@ function renderQueue() {
 function formatTime(ms) {
     if (ms > 356400000) {
         // congrats, have a performance gain :)
-        stop_timer();
+        // stop_timer(); WHOOPS that's an infinite loop. Can't have this locking up after uhhh 4? days?
+        //  it would have stopped the animation (now that it has one) anyway
         return '+99:99:99.9'
     }
     let seconds = Math.floor(ms / 1000);
@@ -212,9 +215,10 @@ function quitRender() {
                 quit_slider.classList.add('active');
                 clickEater.classList.add('active', 'block');
                 // savor your pretty, pretty image if you won, no fade
-                if (uiState.global !== 'win') {
-                    clickEater.classList.add('reset');
-                }
+                // I changed my mind
+                //if (uiState.global !== 'win') {
+                clickEater.classList.add('reset');
+                //}
             }
             break;
         case 'exit':
@@ -318,9 +322,7 @@ function register_reset() {
     reset_button.addEventListener('click', (event) => {
         event.stopPropagation(); // ?? who else could have this event
         if (uiState.global !== 'play') {
-            // get ignored loser
-            // FIXME: turn off hover... but idk what would flick the renderer on to do that
-            //  off by default I guess?
+            // get ignored loser, I also can't be bothered to turn off the hover
             return;
         }
         switch (uiState.reset) {
@@ -379,6 +381,8 @@ function flipRender() {
         dyn_right.appendChild(solution_holder);
         flip_button.classList.remove('active');
     }
+    // WEH you reset my transitions!!!
+    set_protectors(true);
 }
 
 function register_flipper() {
@@ -401,12 +405,7 @@ function puzzleRender() {
         solutionContainer.style.gridTemplateColumns = puzzleContainer.style.gridTemplateColumns;
         solutionContainer.style.gridTemplateRows = puzzleContainer.style.gridTemplateRows;
 
-        // WELCOME TO MY PUZZLE CARNIVAL
-        if (puzzles[uiState.puzzleid].spinnnnn) {
-            captchaContainer.classList.add('spinnnnn');
-        } else {
-            captchaContainer.classList.remove('spinnnnn');
-        }
+        captchaContainer.classList.remove('spinnnnn');
 
         // idk where you went but come back
         clickEater.classList.add('block');
@@ -436,6 +435,14 @@ function puzzleRender() {
                 }
                 uiState.move = 0; // yes I know I clear this twice it doesn't hurt.
                 uiState.render.moves = true;
+
+                // WELCOME TO MY PUZZLE CARNIVAL
+                if (puzzles[uiState.puzzleid].spinnnnn) {
+                    captchaContainer.classList.add('spinnnnn');
+                }
+                // go be in a function somewhere else
+                set_protectors();
+
                 scheduleRender();
             }
         }
@@ -484,6 +491,7 @@ function puzzleRender() {
 
         function unload_tile() {
             puzzleContainer.children[getRandomInt(puzzleContainer.childElementCount)].remove();
+            solutionContainer.lastChild.remove(); // womp womp random del just shifts everything
             if (puzzleContainer.childElementCount !== 0) {
                 setTimeout(() => {requestAnimationFrame(unload_tile)}, uiState.render.tile_time);
             } else {
@@ -735,8 +743,41 @@ function rotate(array, forward = true) {
     } else {
         array.push(array.shift());
     }
-
 }
+
+
+function color_to_rgb(color_code) {
+    const color = parseInt(color_code.slice(1), 16);
+    // ... that's BGR
+    // return [color & 0xFF, (color & 0xFF00) >> 8, (color & 0xFF0000) >> 16]
+    return [(color & 0xFF0000) >> 16, (color & 0xFF00) >> 8, color & 0xFF]
+}
+
+function color_is_dark(color_code) {
+    // pls I just want a color type.
+    const [r, g, b] = color_to_rgb(color_code);
+    return (r + g + b) / 3 < 128
+}
+
+function invert_style_color(color) {
+    if (!color || color.length !== 3) {
+        console.warn("Invalid RGB color string:", color);
+        return "black"; // Fallback color
+    }
+
+    return `rgb(${255 - color[0]}, ${255 - color[1]}, ${255 - color[2]})`;
+}
+
+function get_nonce(len) {
+    const charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let nonce = '';
+    for (let i = 0; i < len; i++) {
+        nonce += charset.charAt(Math.floor(Math.random() * charset.length));
+    }
+    // swear to god if this generates duplicate strings I will riot
+    return nonce;
+}
+
 
 // all my homies hate maps
 const colors = {
@@ -755,16 +796,38 @@ const colors = {
     bluey: ['#8ecae6', '#219ebc', '#023047', '#ffb703', '#fb8500'],
     // https://coolors.co/palette/ef476f-ffd166-06d6a0-118ab2-073b4c
     // too small
-    another_three: ["#ef476f", "#ffd166", "#06d6a0", "#118ab2", "#073b4c"]
-    // TODO: find more I like :)
+    another_three: ["#ef476f", "#ffd166", "#06d6a0", "#118ab2", "#073b4c"],
+    // https://coolors.co/palette/264653-2a9d8f-e9c46a-f4a261-e76f51
+    four: ['#264653', '#2a9d8f', '#e9c46a', '#f4a261', '#e76f51'],
+    // there are no good pride ones idk what to tell you, my man.
+    // I'm too stupid to use the adobe color wheel!!!
+    // I'm paying $5 for coolors for these, if you don't like them I *will* cry
+    //  ok actually most of these look terrible I should not have done this
+    //  I have immediately failed at something and now I never want to do it again
+    // https://coolors.co/palette/d6d2d2-f1e4f3-f4bbd3-f686bd-fe5d9f-364652-071108
+    pink: ['#d6d2d2','#f1e4f3','#f4bbd3', '#f686bd', '#fe5d9f', '#364652', '#071108'],
+    // https://coolors.co/palette/0d0630-18314f-384e77-8bbeb2-e6f9af-f2dfd7-fef9ff
+    five: ['#0d0630', '#18314f', '#384e77', '#8bbeb2', '#e6f9af', '#f2dfd7', '#fef9ff'],
+    // https://coolors.co/palette/61a0af-96c9dc-f06c9b-f9b9b7-f5d491-524948-57467b
+    six: ['#61a0af', '#96c9dc', '#f06c9b', '#f9b9b7', '#f5d491', '#524948', '#57467b'],
+    // https://coolors.co/palette/355070-6d597a-b56576-e56b6f-eaac8b-f5d6c3-fffffa-a9d1dc-53a2be
+    seven: ['#355070', '#6d597a', '#b56576', '#e56b6f', '#eaac8b', '#f5d6c3', '#fffffa', '#a9d1dc', '#53a2be'],
+    // https://coolors.co/palette/70d6ff-ff70a6-ff9770-ffd670-e9ff70-8db38b-8f2d56-19323c-502274
+    eight: ['#70d6ff', '#ff70a6', '#ff9770', '#ffd670', '#e9ff70', '#8db38b', '#8f2d56', '#19323c', '#502274'],
+    // https://coolors.co/palette/033f63-28666e-7c9885-b5b682-fedc97-d1d2f9-a3bcf9-ff5a5f-c1839f
+    nine: ['#033f63', '#28666e', '#7c9885', '#b5b682', '#fedc97', '#d1d2f9', '#a3bcf9', '#ff5a5f', '#c1839f'],
+    // https://coolors.co/palette/227c9d-17c3b2-ffcb77-fef9ef-fe6d73-ffc4eb-ffe4fa-a37774-23231a
+    ten: ['#227c9d', '#17c3b2', '#ffcb77', '#fef9ef', '#fe6d73', '#ffc4eb', '#ffe4fa', '#a37774', '#23231a'],
+    // https://coolors.co/palette/f94144-f3722c-f8961e-f9c74f-90be6d-43aa8b-227c9d-3e6cb6-564b9d-3e3384
+    eleven: ['#f94144', '#f3722c', '#f8961e', '#f9c74f', '#90be6d', '#43aa8b', '#227c9d', '#3e6cb6', '#564b9d', '#3e3384'],
+    // https://coolors.co/palette/d00000-ffba08-3f88c5-032b43-136f63-713e5a
+    twelve: ['#d00000', '#ffba08', '#3f88c5', '#032b43', '#136f63', '#713e5a']
+    // TODO: find more I like :(
 };
 
 // whitelist of the symbol set to narrow it down
 //  also you're gonna want them to not by radially symmetric in any way for certain hell modes
 //  ... or maybe you do
-
-// require the puzzle to contain these in some form
-//  alt mode to force only from this set
 const symbols = {
     // like and subscribe
     subscribe: ['youtube', 'hand-thumbs-up', 'sunglasses', 'twitch'],
@@ -772,7 +835,7 @@ const symbols = {
     paul: ['egg', 'fire', 'egg-fried'],
     // "go to the bank and withdraw the funds" - conveniently the size of a 3x3
     //  I like chat-left-text but I feel headset is more appropriate. No office phone icon, tragically.
-    withdrawfunds: ['headset', 'car-front', 'bank', 'person-vcard', 'credit-card-2-back',
+    withdrawfunds: ['headset', 'chat-left-text', 'car-front', 'bank', 'person-vcard', 'credit-card-2-back',
         'cash-coin', 'currency-exchange', 'currency-bitcoin'],
     // MyCoin is a very real, award-winning financial establishment I'll have you know
     //  VERY tempted to add more copies of award to bias selection
@@ -780,15 +843,94 @@ const symbols = {
         'currency-bitcoin', 'currency-euro', 'currency-dollar', 'currency-yen', 'currency-rupee', 'currency-pound',
         'buildings', 'bank', 'calculator', 'graph-up-arrow', 'award', 'headset'],
     // Emojos
-    emojis: ['emoji-grin', 'emoji-astonished', 'emoji-grimace', 'emoji-smile-upside-down',
+    emoji: ['emoji-grin', 'emoji-astonished', 'emoji-grimace', 'emoji-smile-upside-down',
         'emoji-wink', 'emoji-kiss', 'emoji-neutral', 'emoji-expressionless', 'emoji-tear', 'emoji-dizzy', 'emoji-frown',
         'emoji-surprise', 'emoji-smile', 'emoji-heart-eyes', 'emoji-laughing', 'emoji-sunglasses', 'emoji-angry'],
     // Dice
     dice: ['dice-1', 'dice-2', 'dice-3', 'dice-4', 'dice-5', 'dice-6'],
-    // Default whitelist from the set.
-    // TODO: do
-    default: []
+    // Numbers
+    numbers: ['0-circle', '1-circle', '2-circle', '3-circle', '4-circle', '5-circle', '6-circle', '7-circle',
+        '8-circle', '9-circle'],
+
+    // Just a bunch of symbols from the list that are FINE
+    default: ['0-circle', '1-circle', '2-circle', '3-circle', '4-circle', '5-circle', '6-circle', '7-circle',
+        '8-circle', '9-circle', 'airplane-engines', 'alarm', 'archive', 'arrow-clockwise', 'arrow-counterclockwise',
+        'arrow-down-circle', 'arrow-down-left-circle', 'arrow-down-right-circle', 'arrow-left-circle',
+        'arrow-left-right', 'arrow-repeat', 'arrow-right-circle', 'arrow-through-heart', 'arrow-up-circle',
+        'arrow-up-left-circle', 'arrow-up-right-circle', 'at', 'award', 'backpack2', 'bag', 'balloon', 'bandaid',
+        'bank', 'bar-chart-line-fill', 'basket', 'beaker', 'bell', 'bicycle', 'book', 'boombox', 'box-seam', 'bricks',
+        'briefcase', 'brush', 'bug', 'building', 'buildings', 'bullseye', 'bus-front', 'cake', 'calculator',
+        'calendar2-week', 'camera-reels', 'camera', 'capsule', 'car-front', 'cart4', 'cassette', 'chat-dots',
+        'chat-right-text', 'chat-square-quote', 'circle-fill', 'circle-half', 'circle', 'cloud-drizzle', 'cloud-fog2',
+        'cloud-hail', 'cloud-haze2', 'cloud-lightning-rain', 'cloud-lightning', 'cloud-moon', 'cloud-rain',
+        'cloud-sleet', 'cloud-snow', 'cloud-sun', 'clouds', 'controller', 'credit-card', 'cup-hot', 'cup-straw',
+        'currency-bitcoin', 'currency-dollar', 'currency-euro', 'currency-exchange', 'currency-pound', 'currency-rupee',
+        'currency-yen', 'diagram-3', 'diamond-fill', 'diamond-half', 'diamond', 'dice-1', 'dice-2', 'dice-3', 'dice-4',
+        'dice-5', 'dice-6', 'display', 'door-closed', 'door-open', 'duffle', 'easel', 'egg-fried', 'egg', 'emoji-angry',
+        'emoji-astonished', 'emoji-dizzy', 'emoji-expressionless', 'emoji-frown', 'emoji-grimace', 'emoji-grin',
+        'emoji-heart-eyes', 'emoji-kiss', 'emoji-laughing', 'emoji-neutral', 'emoji-smile-upside-down', 'emoji-smile',
+        'emoji-sunglasses', 'emoji-surprise', 'emoji-tear', 'emoji-wink', 'envelope-at', 'envelope-paper-heart',
+        'exclamation-triangle', 'eye-fill', 'fingerprint', 'fire', 'flask', 'floppy', 'folder', 'fork-knife', 'gear',
+        'gift', 'graph-down-arrow', 'graph-up-arrow', 'hand-thumbs-down', 'hand-thumbs-up', 'handbag', 'headphones',
+        'headset', 'heart', 'heartbreak', 'hospital', 'hourglass-bottom', 'hourglass-split', 'hourglass-top',
+        'hourglass', 'house', 'image', 'key', 'keyboard', 'lightbulb', 'link-45deg', 'mailbox-flag', 'mailbox',
+        'measuring-cup', 'mic', 'music-note-beamed', 'newspaper', 'paint-bucket', 'paperclip', 'peace', 'pencil',
+        'person-raised-hand', 'person-standing-dress', 'person-standing', 'person-walking', 'piggy-bank', 'printer',
+        'question-diamond', 'recycle', 'rocket', 'shop', 'sign-stop', 'speedometer', 'stoplights', 'stopwatch',
+        'suit-club', 'suit-diamond', 'suit-heart', 'suit-spade', 'trash3', 'tree', 'umbrella', 'volume-down',
+        'volume-mute', 'volume-off', 'volume-up', 'watch', 'wifi-1', 'wifi-2', 'wifi-off', 'wifi']
 };
+
+
+/**
+ * Array of puzzles to iterate through for challenge
+ * See plan_content for primary members
+ * Extra features:
+ *  @param {number} move_multiplier - Set the move limit to this multiplier of the required moves. Yes you can go lower (rounds down(?))
+ *  @param {boolean} spinnnnn - spiiiiiinnnnnnnnnn
+ *  @param {string} protect - Enable screen protector 'p' for puzzle, 's' for solution, 'b' for both
+ *  @param {string} protect_pattern - Protector theme id, see protectors.svg. Color is baked into the svg, sorry.
+ */
+const puzzles = [
+    {
+        size: 2, steps: 1,
+        symbol_set: 'paul', exclusive_symbols: true,
+        color_set: 'bluey', move_multiplier: 1, rotation: true
+    },
+    {
+        size: 3, steps: 2,
+        symbol_set: 'withdrawfunds', exclusive_symbols: true,
+        invert_symbol: 'always', rotation: false,
+        protect: 's', protect_pattern: 'wavy'
+    },
+    {
+        size: 4, steps: 3,
+        image_override: 'wwwwtsactp.png',
+        move_multiplier: 3
+    },
+    {
+        size: 1, steps: 1,
+        symbol_set: 'emoji', rotation: false,
+        protect: 'b', protect_pattern: 'spotlight'
+    },
+    {
+        size: 4, steps: 3,
+        symbol_set: 'mycoin', exclusive_symbols: true,
+        invert_symbol: 'B&W', rotation: false,
+        move_multiplier: 1.75
+    },
+    {
+        size: 10, steps: 1, single_symbol: 'emoji-kiss',
+        single_color: '#17c3b2', rotation: false,
+        safety: false, nonce: false, move_multiplier: 18749
+    },
+    {
+        size: 5, steps: 1, shuffles: false,
+        symbol_set: 'subscribe', exclusive_symbols: true,
+        color_set: 'eight', invert_symbol: 'always', rotation: true,
+        move_multiplier: 1, spinnnnn: true
+    }
+];
 
 const affirmations = [
     'You still have moves left!',
@@ -797,7 +939,6 @@ const affirmations = [
 
     'Do it for Miller!',
     'Believe in the us that believes in you!',
-    'Help us help you help us all!',
     'Live Laugh Slide',
     'Object [object]',
     'Have you tried moving it to the left?',
@@ -805,39 +946,8 @@ const affirmations = [
     '                                                   Not yet!',
     document.documentElement.innerHTML.replace(/([\r\n])/g, '')
 ]
-
-function color_to_rgb(color_code) {
-    const color = parseInt(color_code.slice(1), 16);
-    return [color & 0xFF, (color & 0xFF00) >> 8, (color & 0xFF0000) >> 16]
-}
-
-function color_is_dark(color_code) {
-    // pls I just want a color type.
-    const [r, g, b] = color_to_rgb(color_code);
-    return (r + g + b) / 3 < 128
-}
-
-// FIXME: replace invert() before I forget AGAIN
-function invert_style_color(color_string) {
-    // ...colors coming out of .style are rgb(a??)()
-    const parts = color_string.match(/\d+/g); // Extracts numbers
-    if (!parts || parts.length !== 3) {
-        console.warn("Invalid RGB color string:", color_string);
-        return "black"; // Fallback color
-    }
-
-    return `rgb(${255 - parseInt(parts[0])}, ${255 - parseInt(parts[1])}, ${255 - parseInt(parts[2])})`;
-}
-
-function get_nonce(len) {
-    const charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    let nonce = '';
-    for (let i = 0; i < len; i++) {
-        nonce += charset.charAt(Math.floor(Math.random() * charset.length));
-    }
-    // swear to god if this generates duplicate strings I will riot
-    return nonce;
-}
+// put our thumb on the scale a little bit
+affirmations.push(affirmations[0], affirmations[0], affirmations[0], affirmations[0]);
 
 
 /**
@@ -853,8 +963,8 @@ function get_nonce(len) {
  *     The same applies to single symbol mode and colors as well as exclusive symbols with a small symbol set.
  *     Enabling rotation will likely prevent these from failing
  * - Disabling the safety will allow for explicitly bad combination (one color, one symbol, no rotation)
- *       but will also interfere with standard generation, so only disable if you want it to be bad.
- *     Duplicate tiles will not be interchangeable unless the nonce is off
+ *       but will also interfere with standard generation, so only disable if you want to have fun
+ *     Identical tiles will not be interchangeable unless the nonce is off
  * - Always inverting color can look nice at high saturations but may result in poor contrast with some colors.
  *
  * Idea: Reverse-colorblind mode, colors are generated notably close to each other. Maybe a similar rotation mode.
@@ -862,13 +972,18 @@ function get_nonce(len) {
  * @param {number} size - Puzzle size, always square.
  * @param {number} steps - Number of times to slide the initial puzzle rows/columns.
  * @param {number} shuffles - !! Randomly shuffle tiles n times. basically guaranteed to break the puzzle.
- * @param {null|string} image_override - Use an image instead of symbols. Maybe the user's profile picture? :)
+ * @param {null|string} image_override - Use an image instead of symbols. Ignores all other settings.
  * @param {string} symbol_set - Symbol set to choose from first (then fallback to default)
  * @param {boolean} exclusive_symbols - !! Only choose from selected symbol set
  * @param {null|string} single_symbol - !! Only use the symbol name provided.
  * @param {string} color_set - Color scheme to pick from.
  * @param {null|string} single_color - !! Only use provided color code for tiles
  * @param {string} invert_symbol - Set symbol stroke to the background's inverse. One of 'always', 'dark', 'B&W', or 'never'
+ *  'always' - Fill is the inverse of the background
+ *  'dark' - Fill is the inverse of the background is considered "dark enough"
+ *      idk what I was doing here, I don't like it very much. Maybe change to literal filter: invert() ?
+ *  'B&W' - Fill is black or white depending on tile color
+ *  'never' - symbol is presented as-is and fill is not touched.
  * @param {boolean} rotation - Rotate symbols randomly.
  * @param {boolean} safety - Generator safety override.
  * @param {boolean} nonce - Prevents duplicate tiles (prevented by safety) from being interchangeable
@@ -909,6 +1024,7 @@ function plan_content({size, steps, shuffles = 0,
             const color_total = single_color ? 1 : colors[color_set].length;
             // Good habits never die
             //  overlap of requested and default set not considered because it's tedious and you're probably fine.
+            // BUT!! this also means you *must* have a default set that gets us to the required total
             const symbol_total = single_symbol ? 1 : exclusive_symbols ? symbols[symbol_set].length : symbols.default.length;
             // I ALREADY TOLD YOU IT'S FINE! ...probably
             const rotation_total = rotation ? 36 : 1;
@@ -956,9 +1072,11 @@ function plan_content({size, steps, shuffles = 0,
 
                 const symbol = document.createElementNS("http://www.w3.org/2000/svg", "svg");
                 if (invert_symbol === 'always' || (invert_symbol === 'dark' && color_is_dark(selected_color))) {
-                    symbol.setAttribute('fill', selected_color);
+                    const new_color = invert_style_color(color_to_rgb(selected_color));
+                    symbol.setAttribute('fill', new_color);
                     // big uh-oh, if something can't do invert they will be invisible lol
-                    symbol.setAttribute('filter', 'invert(1)');
+                    // I have been informed that invert is resource heavy so go awy
+                    // symbol.setAttribute('filter', 'invert(1)');
                 } else if (invert_symbol === 'B&W') {
                     if (color_is_dark(selected_color)) {
                         symbol.setAttribute('fill', 'white')
@@ -1207,6 +1325,7 @@ function inject_controls() {
 
 function inject_debug() {
     // TODO: unhook overflow on main div, glue on a panel to control puzzle zero settings
+    //  that's effort, get owned, death stranding 2 is out
 }
 
 
@@ -1267,38 +1386,6 @@ function relightRender() {
         });
     }
 }
-
-/**
- * Array of puzzles to iterate through for challenge
- * See plan_content for primary members
- * Extra features:
- *  @param {number} move_multiplier - Set the move limit to this multiplier of the required moves. Yes you can go lower (rounds down(?))
- *  @param {boolean} spinnnnn - spiiiiiinnnnnnnnnn
- */
-const puzzles = [
-    {
-        size: 3, steps: 2,
-        symbol_set: 'withdrawfunds', exclusive_symbols: true,
-        invert_symbol: 'always', rotation: false
-    },
-    {
-        size: 4, steps: 2,
-        image_override: 'wwwwtsactp.png',
-        move_multiplier: 2
-    },
-    {
-        size: 4, steps: 3, shuffles: false,
-        symbol_set: 'mycoin', exclusive_symbols: true,
-        color_set: 'default', invert_symbol: 'B&W', rotation: false,
-        move_multiplier: 1.5
-    },
-    /*{
-        size: 5, steps: 5, shuffles: false,
-        symbol_set: 'subscribe', exclusive_symbols: true,
-        color_set: 'another_three', invert_symbol: 'always', rotation: true,
-        move_multiplier: 1, spinnnnn: true
-    }*/
-];
 
 
 function slideRender() {
@@ -1436,9 +1523,14 @@ function checkMove() {
         won &= tile.firstElementChild.dataset.code === solutionContainer.children[i].dataset.code
     }
 
+    // lol 10% chance to return on lose instead of killing?
+
     if (won || (uiState.total_moves !== -1 && uiState.move >= uiState.total_moves)) {
         // kill timer - stop will call a final render
         stop_timer();
+
+        // I want to get off mr bones wild ride
+        clear_protectors()
 
         // technically it could be *gasp* off for a frame or so otherwise
         clickEater.classList.add('active', 'block');
@@ -1454,7 +1546,7 @@ function checkMove() {
             uiState.render.puzzle = true; // Mods, unload his tiles
         } else {
             // congrats I guess, not like it was hard or whatever
-            humanity.level -= Math.floor(0.1 * (100 - humanity.level))
+            humanity.level -= Math.floor(0.2 * (100 - humanity.level))
         }
 
         uiState.render.humanity = true;
@@ -1506,4 +1598,121 @@ function register_arrows() {
         humanity_adjust('s');
         arrowhandler(event, 'r');
     });
+}
+
+
+
+async function protectorInjector() {
+    // TURNS OUT SAFARI IS BAD AT SVGS
+    //  it can't fetch files with a fill url. Chrome can, of course.
+    // and you can't just suck up an svg like
+    const resp = await fetch('protectors.svg');
+    if (!resp.ok) {
+        // I genuinely don't know what to do
+        throw new Error('Protector pull ate it!')
+    }
+    const svg = await resp.text();
+
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(svg, 'image/svg+xml');
+    const defs = doc.querySelector('defs');
+
+    const protector = document.getElementById('protector-svgs');
+
+    if (defs) {
+        while (defs.firstChild) {
+            protector.appendChild(defs.firstChild);
+        }
+    }
+}
+
+
+function clear_protectors() {
+    // idk why I made this a function
+    if (uiState.render.protector !== null) {
+        clearTimeout(uiState.render.protector);
+        uiState.render.protector = null;
+        document.querySelectorAll('.protector').forEach((el) => {
+            el.classList.remove('active');
+            const rect = el.querySelector('rect');
+            rect.style.transition = `transform 0.3s ease-in-out`;
+            rect.style.transform = `translate(0px, 0px) rotate(0deg)`;
+        })
+    }
+}
+
+function set_protectors(reset=false) {
+    // This is a pain because safari HATES FUN
+    // also hoooo buddy this gets a little framey with both on. SAFARI THIS IS ALL YOUR FAULT.
+    if (reset && uiState.render.protector != null) {
+        clearTimeout(uiState.render.protector);
+        uiState.render.protector = null;
+    }
+
+    if (uiState.render.can_protect && puzzles[uiState.puzzleid].protect != null) {
+        let sel = '.protector'
+        if (puzzles[uiState.puzzleid].protect === 'p') {
+            sel = '#puzzle-protector';
+        } else if (puzzles[uiState.puzzleid].protect === 's') {
+            sel = '#solution-protector';
+        }
+        // turn on the protectors then find the actual rect elements
+        let protectors = document.querySelectorAll(sel);
+        protectors.forEach(protector => {protector.classList.add('active')});
+        // what do you mean there isn't a map function I hate these stupid objects
+        //  THERE IS ONE NOW >:C
+        protectors = [...protectors].map(protector => protector.querySelector('rect'))
+
+        const pattern = puzzles[uiState.puzzleid].protect_pattern == null ? 'wavy' : puzzles[uiState.puzzleid].protect_pattern
+        protectors.forEach(protector => {protector.setAttribute('fill', `url(#${pattern})`)})
+
+        // finally, being a professional shape rotator pays off
+        // 400x inside a 100x, the most extreme movement needs to leave sqrt(2)100 sooo 142px from edge
+        //  that's +-58 px of transform room. That's a lot less than I had hoped.
+        //  there's a hair more space judging by throwing things around manually in the console but let's not go crazy.
+        //   maybe some padding/broder artifacts?
+        // Get increased, call our border 150px, give me +-75, that's 225 that's 450. centering that is UHHHH -175
+        //  I want you getting seasick off this.
+
+        // now, the spotlight is a whole other beast because that's math and that sucks.
+        //  that's rendered at a 1:1 scale with a radius of 15 units which are probably pixels
+        // give it a little wiggle room to go off the edge a bit that's +-40
+        // I simply cannot be bothered to do angle math. I want the dvd bounce SO BAD but I just don't wanna
+        //  Well something is off about that math and idk why. Knock it down 10.
+
+        const maxOffset = pattern === 'spotlight' ? 36 : 75;
+        const maxAngle = 45;
+        // I gotta
+        const minDelay = pattern === 'spotlight' ? 2000 : 10000;
+
+        function jostleRects() {
+            let newX = 0;
+            let newY = 0;
+            let newA = 0;
+
+            // 10-14s
+            const nextJostle = Math.trunc(minDelay + (Math.random() * 4000));
+            console.log(nextJostle);
+
+            requestAnimationFrame(() => {
+                protectors.forEach(protector => {
+                    newX = (Math.random() * 2 - 1) * maxOffset;
+                    newY = (Math.random() * 2 - 1) * maxOffset;
+                    newA = (Math.random() * 2 - 1) * maxAngle;
+
+                    // all this rotatin's hell on my knees boss
+                    protector.style.transition = `transform ${nextJostle}ms ease-in-out`;
+                    if (pattern === 'spotlight') {
+                        // try to save a few resources
+                        protector.style.transform = `translate(${newX}px, ${newY}px)`;
+                    } else {
+                        protector.style.transform = `translate(${newX}px, ${newY}px) rotate(${newA}deg)`;
+                    }
+                })
+                uiState.render.protector = setTimeout(jostleRects, nextJostle);
+            });
+        }
+        // lol no initial jostle, you get 10 seconds. No, half. No, less
+        uiState.render.protector = setTimeout(jostleRects, reset ? 0 : 2000 + (Math.random() * 1000))
+    }
 }

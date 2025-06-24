@@ -1069,6 +1069,28 @@ In theory you could use the center control or remove the ui flip button
 
 
 
+/* :) */
+.protector {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    bottom: 2px;
+    right: 2px;
+    pointer-events: none;
+    z-index: 19;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+
+    transform-origin: center;
+    overflow: hidden;
+}
+.protector.active {
+    opacity: 1;
+}
+.protector.active. rect {
+    transform-origin: center;
+    will-change: transform, opacity;
+}
 
 /*#control-container {
   background: linear-gradient(to bottom, #f0f0f0, #e0e0e0);

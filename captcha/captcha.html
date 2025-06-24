@@ -19,6 +19,11 @@
         </div>
         <!-- overlay div I can slide fake tiles around on -->
         <div id="slide-overlay"></div>
+        <div id="puzzle-protector" class="protector">
+          <svg preserveAspectRatio="none" viewBox="0 0 100 100">
+            <rect fill="url(#wavyPattern)" height="450" width="450" x="-175" y="-175"/>
+          </svg>
+        </div>
         <!-- little id popup for when we flip, tragically not shareable with help overlay? -->
         <div class="container-id"><svg><use xlink:href="bootstrap-icons.svg#grid-3x3"/></svg></div>
         <div class="info-panel">
@@ -79,6 +84,11 @@
       <div id="solution-holder">
         <div id="solution-container"></div>
         <div class="tile-fuzz"></div>
+        <div id="solution-protector" class="protector">
+          <svg preserveAspectRatio="none" viewBox="0 0 100 100">
+            <rect fill="url(#wavyPattern)" height="450" width="450" x="-175" y="-175"/>
+          </svg>
+        </div>
         <div class="container-id"><svg><use xlink:href="bootstrap-icons.svg#image"/></svg></div>
         <div class="info-panel"><div class="info-body">
           <p>
@@ -167,10 +177,13 @@
   </div>
   <div id="click-eater"></div>
 </div>
+<svg id="protector-svgs" style="position:absolute; width:0; height:0;"></svg>
 
   <script type="text/javascript" src="main.js"></script>
   <script type="text/javascript">
+    protectorInjector().then(()=>{uiState.render.can_protect = true})
     inject_controls();
+
     scheduleRender();
   </script>
 </body>
