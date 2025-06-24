@@ -17,7 +17,8 @@ const uiState = {
         puzzle: false, // update puzzle state
         reaffirm: false, // you can do it (:
 
-        tile_time: 150, // ms to fake load a tile
+        // now configurable because I felt bad having it here. Defaults to this value in puzzleCycle
+        tile_time: 150, // DEFAULT ms to fake load a tile
         do_reset: false, // reset puzzle board to start
 
         // jk, slides are wrangled by the arrow handler because they're ~complicated~
@@ -46,6 +47,382 @@ const uiState = {
 
     active_tile: null, // active tile node
 };
+
+
+// all my homies hate maps
+/**
+ * COLORS!
+ * Tile colors are selected randomly from a set (unless you assign the color) w/o replacement (until necessary)
+ *
+ * Found some online. I... was not good at making them.
+ * Remember you have size^2 tiles, that adds up fast.
+ */
+const colors = {
+    // I am good with names!!!
+    // https://coolors.co/palette/2f3e77-f5b841-f4ece3-2cb67d-ff4f5e-4ac6ff-ff6a3d
+    default: ['#2f3e77', '#f5b841', '#f4ece3', '#2cb67d', '#ff4f5e', '#4ac6ff', '#ff6a3d'],
+    // another I like https://coolors.co/palette/f94144-f3722c-f8961e-f9844a-f9c74f-90be6d-43aa8b-4d908e-577590-277da1
+    // But I don't care for the 4th and I think the 8 and 9 are too similar to 7 and 10
+    //  but I don't like how unbalanced it is if I remove all three
+    another_one: ['#f94144', '#f3722c', '#f8961e', '#f9844a', '#f9c74f', '#90be6d', '#43aa8b', '#4d908e', '#577590', '#277da1'],
+    // https://coolors.co/palette/001219-005f73-0a9396-94d2bd-e9d8a6-ee9b00-ca6702-bb3e03-ae2012-9b2226
+    //  the reds on the end are too similar imho
+    another_two: ['#001219', '#005f73', '#0a9396', '#94d2bd', '#e9d8a6', '#ee9b00', '#ca6702', '#bb3e03', '#ae2012', '#9b2226'],
+    // https://coolors.co/palette/8ecae6-219ebc-023047-ffb703-fb8500
+    // ...is this bluey? also too small
+    bluey: ['#8ecae6', '#219ebc', '#023047', '#ffb703', '#fb8500'],
+    // https://coolors.co/palette/ef476f-ffd166-06d6a0-118ab2-073b4c
+    // too small
+    another_three: ["#ef476f", "#ffd166", "#06d6a0", "#118ab2", "#073b4c"],
+    // https://coolors.co/palette/264653-2a9d8f-e9c46a-f4a261-e76f51
+    four: ['#264653', '#2a9d8f', '#e9c46a', '#f4a261', '#e76f51'],
+    // there are no good pride ones idk what to tell you, my man.
+    // I'm too stupid to use the adobe color wheel!!!
+    // I'm paying $5 for coolors for these, if you don't like them I *will* cry
+    //  ok actually most of these look terrible I should not have done this
+    //  I have immediately failed at something and now I never want to do it again
+    // https://coolors.co/palette/d6d2d2-f1e4f3-f4bbd3-f686bd-fe5d9f-364652-071108
+    pink: ['#d6d2d2','#f1e4f3','#f4bbd3', '#f686bd', '#fe5d9f', '#364652', '#071108'],
+    // https://coolors.co/palette/0d0630-18314f-384e77-8bbeb2-e6f9af-f2dfd7-fef9ff
+    five: ['#0d0630', '#18314f', '#384e77', '#8bbeb2', '#e6f9af', '#f2dfd7', '#fef9ff'],
+    // https://coolors.co/palette/61a0af-96c9dc-f06c9b-f9b9b7-f5d491-524948-57467b
+    six: ['#61a0af', '#96c9dc', '#f06c9b', '#f9b9b7', '#f5d491', '#524948', '#57467b'],
+    // https://coolors.co/palette/355070-6d597a-b56576-e56b6f-eaac8b-f5d6c3-fffffa-a9d1dc-53a2be
+    seven: ['#355070', '#6d597a', '#b56576', '#e56b6f', '#eaac8b', '#f5d6c3', '#fffffa', '#a9d1dc', '#53a2be'],
+    // https://coolors.co/palette/70d6ff-ff70a6-ff9770-ffd670-e9ff70-8db38b-8f2d56-19323c-502274
+    eight: ['#70d6ff', '#ff70a6', '#ff9770', '#ffd670', '#e9ff70', '#8db38b', '#8f2d56', '#19323c', '#502274'],
+    // https://coolors.co/palette/033f63-28666e-7c9885-b5b682-fedc97-d1d2f9-a3bcf9-ff5a5f-c1839f
+    nine: ['#033f63', '#28666e', '#7c9885', '#b5b682', '#fedc97', '#d1d2f9', '#a3bcf9', '#ff5a5f', '#c1839f'],
+    // https://coolors.co/palette/227c9d-17c3b2-ffcb77-fef9ef-fe6d73-ffc4eb-ffe4fa-a37774-23231a
+    ten: ['#227c9d', '#17c3b2', '#ffcb77', '#fef9ef', '#fe6d73', '#ffc4eb', '#ffe4fa', '#a37774', '#23231a'],
+    // https://coolors.co/palette/f94144-f3722c-f8961e-f9c74f-90be6d-43aa8b-227c9d-3e6cb6-564b9d-3e3384
+    eleven: ['#f94144', '#f3722c', '#f8961e', '#f9c74f', '#90be6d', '#43aa8b', '#227c9d', '#3e6cb6', '#564b9d', '#3e3384'],
+    // https://coolors.co/palette/d00000-ffba08-3f88c5-032b43-136f63-713e5a
+    twelve: ['#d00000', '#ffba08', '#3f88c5', '#032b43', '#136f63', '#713e5a']
+    // TODO: find more I like :(
+};
+
+// whitelist of the symbol set to narrow it down
+//  also you're gonna want them to not by radially symmetric in any way for certain hell modes
+//  ... or maybe you do
+/**
+ * Your symbols. Tiles get a symbol assigned randomly from a set w/o replacement (until necessary) unless fixed.
+ * By default, once your chosen set is exhausted, it starts pulling from the default set.
+ * This allows you to insert a single easter or whatever you want.
+ * You can, of course, bias selection and add duplicates.
+ */
+const symbols = {
+    // like and subscribe
+    subscribe: ['youtube', 'hand-thumbs-up', 'sunglasses', 'twitch'],
+    // chicken paul
+    paul: ['egg', 'fire', 'egg-fried'],
+    // "go to the bank and withdraw the funds" - conveniently the size of a 3x3
+    //  I like chat-left-text but I feel headset is more appropriate. No office phone icon, tragically.
+    withdrawfunds: ['headset', 'chat-left-text', 'car-front', 'bank', 'person-vcard', 'credit-card-2-back',
+        'cash-coin', 'currency-exchange', 'currency-bitcoin'],
+    // MyCoin is a very real, award-winning financial establishment I'll have you know
+    //  VERY tempted to add more copies of award to bias selection
+    mycoin: ['currency-exchange', 'cash-coin', 'safe', 'briefcase',
+        'currency-bitcoin', 'currency-euro', 'currency-dollar', 'currency-yen', 'currency-rupee', 'currency-pound',
+        'buildings', 'bank', 'calculator', 'graph-up-arrow', 'award', 'headset'],
+    // Emojos
+    emoji: ['emoji-grin', 'emoji-astonished', 'emoji-grimace', 'emoji-smile-upside-down',
+        'emoji-wink', 'emoji-kiss', 'emoji-neutral', 'emoji-expressionless', 'emoji-tear', 'emoji-dizzy', 'emoji-frown',
+        'emoji-surprise', 'emoji-smile', 'emoji-heart-eyes', 'emoji-laughing', 'emoji-sunglasses', 'emoji-angry'],
+    // Dice
+    dice: ['dice-1', 'dice-2', 'dice-3', 'dice-4', 'dice-5', 'dice-6'],
+    // Numbers
+    numbers: ['0-circle', '1-circle', '2-circle', '3-circle', '4-circle', '5-circle', '6-circle', '7-circle',
+        '8-circle', '9-circle'],
+
+    // Just a bunch of symbols from the list that are FINE
+    default: ['0-circle', '1-circle', '2-circle', '3-circle', '4-circle', '5-circle', '6-circle', '7-circle',
+        '8-circle', '9-circle', 'airplane-engines', 'alarm', 'archive', 'arrow-clockwise', 'arrow-counterclockwise',
+        'arrow-down-circle', 'arrow-down-left-circle', 'arrow-down-right-circle', 'arrow-left-circle',
+        'arrow-left-right', 'arrow-repeat', 'arrow-right-circle', 'arrow-through-heart', 'arrow-up-circle',
+        'arrow-up-left-circle', 'arrow-up-right-circle', 'at', 'award', 'backpack2', 'bag', 'balloon', 'bandaid',
+        'bank', 'bar-chart-line-fill', 'basket', 'beaker', 'bell', 'bicycle', 'book', 'boombox', 'box-seam', 'bricks',
+        'briefcase', 'brush', 'bug', 'building', 'buildings', 'bullseye', 'bus-front', 'cake', 'calculator',
+        'calendar2-week', 'camera-reels', 'camera', 'capsule', 'car-front', 'cart4', 'cassette', 'chat-dots',
+        'chat-right-text', 'chat-square-quote', 'circle-fill', 'circle-half', 'circle', 'cloud-drizzle', 'cloud-fog2',
+        'cloud-hail', 'cloud-haze2', 'cloud-lightning-rain', 'cloud-lightning', 'cloud-moon', 'cloud-rain',
+        'cloud-sleet', 'cloud-snow', 'cloud-sun', 'clouds', 'controller', 'credit-card', 'cup-hot', 'cup-straw',
+        'currency-bitcoin', 'currency-dollar', 'currency-euro', 'currency-exchange', 'currency-pound', 'currency-rupee',
+        'currency-yen', 'diagram-3', 'diamond-fill', 'diamond-half', 'diamond', 'dice-1', 'dice-2', 'dice-3', 'dice-4',
+        'dice-5', 'dice-6', 'display', 'door-closed', 'door-open', 'duffle', 'easel', 'egg-fried', 'egg', 'emoji-angry',
+        'emoji-astonished', 'emoji-dizzy', 'emoji-expressionless', 'emoji-frown', 'emoji-grimace', 'emoji-grin',
+        'emoji-heart-eyes', 'emoji-kiss', 'emoji-laughing', 'emoji-neutral', 'emoji-smile-upside-down', 'emoji-smile',
+        'emoji-sunglasses', 'emoji-surprise', 'emoji-tear', 'emoji-wink', 'envelope-at', 'envelope-paper-heart',
+        'exclamation-triangle', 'eye-fill', 'fingerprint', 'fire', 'flask', 'floppy', 'folder', 'fork-knife', 'gear',
+        'gift', 'graph-down-arrow', 'graph-up-arrow', 'hand-thumbs-down', 'hand-thumbs-up', 'handbag', 'headphones',
+        'headset', 'heart', 'heartbreak', 'hospital', 'hourglass-bottom', 'hourglass-split', 'hourglass-top',
+        'hourglass', 'house', 'image', 'key', 'keyboard', 'lightbulb', 'link-45deg', 'mailbox-flag', 'mailbox',
+        'measuring-cup', 'mic', 'music-note-beamed', 'newspaper', 'paint-bucket', 'paperclip', 'peace', 'pencil',
+        'person-raised-hand', 'person-standing-dress', 'person-standing', 'person-walking', 'piggy-bank', 'printer',
+        'question-diamond', 'recycle', 'rocket', 'shop', 'sign-stop', 'speedometer', 'stoplights', 'stopwatch',
+        'suit-club', 'suit-diamond', 'suit-heart', 'suit-spade', 'trash3', 'tree', 'umbrella', 'volume-down',
+        'volume-mute', 'volume-off', 'volume-up', 'watch', 'wifi-1', 'wifi-2', 'wifi-off', 'wifi']
+};
+
+
+/**
+ * Array of puzzles to iterate through for challenge
+ * See plan_content for puzzle conf settings.
+ * This set will run you though the possibilities without making any individual one too too hard (maybe)
+ * Extra features:
+ *  @param {number} move_multiplier - Set the move limit to this multiplier of the required moves. Yes you can go lower (rounds down(?))
+ *  @param {number} tile_time - time between tile loads, in milliseconds
+ *  @param {boolean} spinnnnn - spiiiiiinnnnnnnnnn
+ *  @param {string} protect - Enable screen protector 'p' for puzzle, 's' for solution, 'b' for both
+ *  @param {string} protect_pattern - Protector theme id, see protectors.svg. Color is baked into the svg, sorry.
+ *      SAFARI HATES SVGS! I got it working but it greatly reduced flexibility.
+ *      I *really* wanted to let it invert the underlying color. You can't even SET the color outside the svg def now.
+ *      Your protector svg can be a watermark or whatever. I don't touch any settings wrt rendering/colors
+ *      It will be automagically tiles and jammed in a 450x450 rect under a 100x100 centered viewbox and wriggled around
+ *       in a way that won't show the edges.
+ */
+const puzzles = [
+    {
+        size: 2, steps: 1,
+        symbol_set: 'paul', exclusive_symbols: true,
+        color_set: 'bluey', move_multiplier: 1, rotation: true
+    },
+    {
+        size: 3, steps: 2,
+        symbol_set: 'withdrawfunds', exclusive_symbols: true,
+        invert_symbol: 'always', rotation: false,
+        protect: 's', protect_pattern: 'wavy'
+    },
+    {
+        size: 4, steps: 3,
+        image_override: 'wwwwtsactp.png',
+        move_multiplier: 3
+    },
+    {
+        size: 1, steps: 1,
+        symbol_set: 'emoji', rotation: false,
+        protect: 'b', protect_pattern: 'spotlight'
+    },
+    {
+        size: 4, steps: 3,
+        symbol_set: 'mycoin', exclusive_symbols: true,
+        invert_symbol: 'B&W', rotation: false,
+        move_multiplier: 1.75,
+        tile_time: 30
+    },
+    {
+        size: 10, steps: 1, single_symbol: 'emoji-kiss',
+        single_color: '#17c3b2', rotation: false,
+        safety: false, nonce: false, move_multiplier: 18749
+    },
+    {
+        size: 5, steps: 1, shuffles: false,
+        symbol_set: 'subscribe', exclusive_symbols: true,
+        color_set: 'eight', invert_symbol: 'always', rotation: true,
+        move_multiplier: 1, spinnnnn: true
+    }
+];
+
+/**
+ * Reaffirm the user that they can do it!
+ * This is their punishment for trying to quit the puzzle without using all moves.
+ * Biased a little to be a tad less unhinged.
+ * Timout is controlled in the CSS via transition callback, check --affirmation-time
+ *
+ * I should have made the lose state not auto fling the quit slider up to trap them more
+ */
+const affirmations = [
+    'You still have moves left!',
+    "Real humans don't give up that easy!",
+    'You can do it!',
+
+    'Do it for Miller!',
+    'Live Laugh Slide',
+    'Have you tried moving it to the left?',
+    'Up, maybe?',
+    '                                                   Not yet!',
+    // :)
+    '     Object [object]     ',
+    document.documentElement.innerHTML.replace(/([\r\n])/g, '')
+]
+// put our thumb on the scale a little bit
+affirmations.push(affirmations[0], affirmations[0], affirmations[0], affirmations[0]);
+
+
+/**
+ * Plan puzzle content. Image puzzle will disable all other content settings.
+ *
+ * Number of steps is not the number of moves to solution; generation MAY undo its own steps or create something reducible.
+ * Maximum number of moves to solution is floor(size/2)*shifts
+ *
+ * Options that can break thinks are make with exclamation points.
+ * After accidentally making a puzzle that didn't have enough content, I can say that if
+ *  the system fails to make a puzzle the UI will get a little confused but you can skip to the next one
+ *  (the progress meter even leaves that pip blank lmao)
+ *
+ * The tile generator is only smart during its first pass
+ *  (read: first min(symbols.length, colors.length, rotation ? 36 : Inf) tiles);
+ *  if your total number of possible combinations is close to the number of tiles,
+ *  it could get stuck trying to randomly pick combinations that haven't been done yet.
+ *
+ * You can turn off the safety check and it will spit out whatever it wants.
+ *  Identical tiles will secretly be considered different unless you disable the nonce system.
+ *
+ * !! BAD / FUN TIME POTENTIAL !!
+ * - Shuffling even one piece will ruin the expected solution move total.
+ *      Shuffling a piece can ruin traditional sliding puzzles, but this is modified to move a row/col so maybe not?
+ * - Single color mode without enough symbols will fail.
+ *     The same applies to single symbol mode and colors as well as exclusive symbols with a small symbol set.
+ *     Enabling rotation will likely prevent these from failing
+ * - Disabling the safety will allow for explicitly bad combination (one color, one symbol, no rotation)
+ *       but will also interfere with standard generation, so only disable if you want to have fun
+ *     Identical tiles will not be interchangeable unless the nonce is off
+ * - Always inverting color can look nice at high saturation but may result in poor contrast with some colors.
+ *
+ * Idea: Reverse-colorblind mode, colors are generated notably close to each other. Maybe a similar rotation mode.
+ *
+ * @param {number} size - Puzzle size, always square.
+ * @param {number} steps - Number of times to slide the initial puzzle rows/columns. Idk what happens <= 0
+ * @param {number} shuffles - !! Randomly shuffle tiles n times. basically guaranteed to break the puzzle.
+ * @param {null|string} image_override - Use an image instead of symbols. Ignores all other settings.
+ * @param {string} symbol_set - Symbol set to choose from first (then fallback to default)
+ * @param {boolean} exclusive_symbols - !! Only choose from selected symbol set
+ * @param {null|string} single_symbol - !! Only use the symbol name provided.
+ * @param {string} color_set - Color scheme to pick from.
+ * @param {null|string} single_color - !! Only use provided color code for tiles
+ * @param {string} invert_symbol - Set symbol stroke to the background's inverse. One of 'always', 'dark', 'B&W', or 'never'
+ *  'always' - Fill is the inverse of the background
+ *  'dark' - Fill is the inverse of the background is considered "dark enough"
+ *      idk what I was doing here, I don't like it very much. Maybe change to literal filter: invert() ?
+ *  'B&W' - Fill is black or white depending on tile darkness
+ *  'never' - symbol is presented as-is and fill is not touched.
+ * @param {boolean} rotation - Rotate symbols randomly.
+ * @param {boolean} safety - Generator safety override.
+ * @param {boolean} nonce - Prevents duplicate tiles (prevented by safety) from being interchangeable
+ */
+function plan_content({size, steps, shuffles = 0,
+                      image_override= null,
+                      symbol_set= 'emojis', exclusive_symbols = false, single_symbol = null,
+                      color_set = 'default', single_color = null, invert_symbol = 'always',
+                      rotation = true, safety= true, nonce = true} = {}) {
+
+    if (! (size || steps)) {
+        throw new Error('size or steps must be invalid');
+    }
+    const tiles = [];
+    const total_tiles = size * size;
+
+    if (image_override !== null) {
+        // This is (clearly!) off by one but it works in all browsers so IDK!
+        const fr = 100/(size-1);
+        // screw your settings, literally none of them matter
+        for (let i = 0; i < size; i++) {
+            for (let j = 0; j < size; j++) {
+                const tile = document.createElement('div');
+                tile.classList.add('puzzle-tile');
+                tile.style.backgroundSize = `${size}00% ${size}00%`;
+                tile.style.backgroundImage =  `url('${image_override}')`;
+
+                tile.style.backgroundPosition = `${j * fr}% ${i * fr}%`;
+                tile.dataset.index = tiles.length.toString();
+                tile.dataset.code = tile.dataset.index;
+
+                tiles.push(tile);
+            }
+        }
+    } else {
+        if (safety) {
+            // oh baby I don't think I've used a ternary in 8 years
+            const color_total = single_color ? 1 : colors[color_set].length;
+            // Good habits never die
+            //  overlap of requested and default set not considered because it's tedious and you're probably fine.
+            // BUT!! this also means you *must* have a default set that gets us to the required total
+            const symbol_total = single_symbol ? 1 : exclusive_symbols ? symbols[symbol_set].length : symbols.default.length;
+            // I ALREADY TOLD YOU IT'S FINE! ...probably
+            const rotation_total = rotation ? 36 : 1;
+            if (color_total * symbol_total * rotation_total < size * size) {
+                throw new Error("Not enough potential tiles :(");
+            }
+        }
+
+        // RENDER NOTE BEFORE I FORGET:
+        //  style="filter: invert(1);"
+        // but also that doesn't apply to background, only color. so if we set color to background and filter doesn't work
+        //  then everything is invisible, whoops. I may be willing ot take that risk
+        const code_set = new Set();
+
+        let color_pool = [];
+        let symbol_pool = [];
+        const symbols_exhausted = false;
+        const only_color = single_color ? single_color : false;
+        const only_symbol = single_symbol ? single_symbol : false;
+
+        do {
+            // refill color pool
+            if (color_pool.length === 0) {
+                // shallow copy alert
+                // You can't index a map???? why is colors[color_set] undefined
+                color_pool = only_color ? [only_color] : Array.from(colors[color_set]);
+            }
+            // refill symbol pool
+            if (symbol_pool.length === 0) {
+                // Have I mentioned I've missed ternaries?
+                symbol_pool = only_symbol ? [only_symbol] : Array.from(symbols_exhausted ? symbols.default : symbols[symbol_set]);
+            }
+            const selected_color_idx = getRandomInt(color_pool.length);
+            const selected_color = color_pool[selected_color_idx];
+            const selected_symbol_idx = getRandomInt(symbol_pool.length);
+            const selected_symbol = symbol_pool[selected_symbol_idx];
+            const selected_rotation = rotation ? getRandomInt(36) * 10 : 0; // 0 - 350 in increments of 10
+            const tile_code = selected_color + '!' + selected_symbol + '!' + selected_rotation;
+
+            // unique tile or we don't care
+            if (!code_set.has(tile_code) || !safety) {
+                const tile = document.createElement('div');
+                tile.classList.add('puzzle-tile');
+                tile.style.background = selected_color;
+
+                const symbol = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+                if (invert_symbol === 'always' || (invert_symbol === 'dark' && color_is_dark(selected_color))) {
+                    const new_color = invert_style_color(color_to_rgb(selected_color));
+                    symbol.setAttribute('fill', new_color);
+                    // big uh-oh, if something can't do invert they will be invisible lol
+                    // I have been informed that invert is resource heavy so go awy
+                    // symbol.setAttribute('filter', 'invert(1)');
+                } else if (invert_symbol === 'B&W') {
+                    if (color_is_dark(selected_color)) {
+                        symbol.setAttribute('fill', 'white')
+                    } else {
+                        symbol.setAttribute('fill', 'black')
+                    }
+                }
+                if (rotation && selected_rotation) {
+                    symbol.style.transform = `rotate(${selected_rotation}deg)`;
+                    symbol.style.setProperty('--fixed-rotation-angle', `${selected_rotation}deg`);
+                }
+                // nothing to see here OFFICER
+                symbol.style.setProperty('--spin-duration', `${Math.random() * 5}s`);
+                symbol.style.setProperty('--spin-direction', Math.random() > 0.5 ? 'normal' : 'reverse');
+
+                symbol.innerHTML = `<use xlink:href="bootstrap-icons.svg#${selected_symbol}"/>`;
+                tile.appendChild(symbol);
+
+                tile.dataset.index = tiles.length.toString();
+                tile.dataset.code = nonce ? tile_code + '!' + get_nonce(6) : tile_code;
+
+                color_pool.splice(selected_color_idx, 1);
+                symbol_pool.splice(selected_symbol_idx, 1);
+                code_set.add(tile_code);
+                tiles.push(tile);
+            }
+        } while (tiles.length !== total_tiles);
+    }
+
+    // ...why do I return the grid anyway, I don't think it has any use.
+    const [grid, actual_moves, pos_map] = plan_puzz(size, steps, shuffles)
+    return [tiles, pos_map, actual_moves]
+}
+
 
 let frameScheduled = false;
 function scheduleRender() {
@@ -439,7 +816,7 @@ function register_flipper() {
 /**
  * Render the puzzle. Either you're loading a new one, resetting the current one, or you
  *  lost and I'm taking your tiles and going home.
- * uses the delay set in uiState.render.tile_time to delay tile rendering, placing the tiles in solution order.
+ * uses the delay set by puzzleCycle to delay tile rendering, placing the tiles in solution order.
  * Technically there's something to be gained there if you pay real close attention.
  *
  * If you reset, it pops them off and then does another load but with the original data that was backed up.
@@ -479,7 +856,7 @@ function puzzleRender() {
             solutionContainer.appendChild(uiState.current_solution[puzzleContainer.childElementCount]);
             puzzleContainer.appendChild(uiState.current_board[puzzleContainer.childElementCount]);
             if (puzzleContainer.childElementCount < uiState.current_board.length) {
-                setTimeout(() => {requestAnimationFrame(load_tile)}, uiState.render.tile_time)
+                setTimeout(() => {requestAnimationFrame(load_tile)}, puzzles[uiState.puzzleid].tile_time)
             } else {
                 uiState.global = 'play';
                 uiState.render.progress = true;
@@ -520,7 +897,7 @@ function puzzleRender() {
         function reload_tile() {
             puzzleContainer.appendChild(uiState.current_board[puzzleContainer.childElementCount]);
             if (puzzleContainer.childElementCount < uiState.current_board.length) {
-                setTimeout(() => {requestAnimationFrame(reload_tile)}, uiState.render.tile_time)
+                setTimeout(() => {requestAnimationFrame(reload_tile)}, puzzles[uiState.puzzleid].tile_time)
             } else {
                 clickEater.classList.remove('block');
                 decor.classList.add('reveal');
@@ -532,9 +909,9 @@ function puzzleRender() {
         function reload_tiles() {
             puzzleContainer.firstChild.remove();
             if (puzzleContainer.childElementCount === 0) {
-                setTimeout(() => {requestAnimationFrame(reload_tile)}, uiState.render.tile_time)
+                setTimeout(() => {requestAnimationFrame(reload_tile)}, puzzles[uiState.puzzleid].tile_time)
             } else {
-                setTimeout(() => {requestAnimationFrame(reload_tiles)}, uiState.render.tile_time)
+                setTimeout(() => {requestAnimationFrame(reload_tiles)}, puzzles[uiState.puzzleid].tile_time)
             }
         }
         reload_tiles();
@@ -548,7 +925,7 @@ function puzzleRender() {
             puzzleContainer.children[getRandomInt(puzzleContainer.childElementCount)].remove();
             solutionContainer.lastChild.remove(); // womp womp random del just shifts everything
             if (puzzleContainer.childElementCount !== 0) {
-                setTimeout(() => {requestAnimationFrame(unload_tile)}, uiState.render.tile_time);
+                setTimeout(() => {requestAnimationFrame(unload_tile)}, puzzles[uiState.puzzleid].tile_time);
             } else {
                 clickEater.classList.remove('loser'); // but we all know it to be true
             }
@@ -586,7 +963,8 @@ function affirmRender() {
 
 /**
  * Generate new puzzle, setup state to be rendered, request render.
- * Moves state to load for locked render loop
+ * Moves state to load for locked render loop.
+ * I wanted to make tile_time configurable, so we inject it here if you didn't set it.
  */
 function puzzleCycle() {
     // get new data, jam it in places. Handoff to renderer to loop load and then move to play
@@ -603,6 +981,10 @@ function puzzleCycle() {
         uiState.total_moves = Math.round(moves * puzzles[uiState.puzzleid].move_multiplier);
     } else {
         uiState.total_moves = -1;
+    }
+
+    if (!('tile_time' in puzzles[uiState.puzzleid])) {
+        puzzles[uiState.puzzleid].tile_time = uiState.render.tile_time;
     }
 
     // solution_tiles = raw tiles fresh out the oven, send it to the solution region in order
@@ -862,378 +1244,6 @@ function get_nonce(len = 6) {
     return nonce;
 }
 
-
-// all my homies hate maps
-/**
- * COLORS!
- * Tile colors are selected randomly from a set (unless you assign the color) w/o replacement (until necessary)
- *
- * Found some online. I... was not good at making them.
- * Remember you have size^2 tiles, that adds up fast.
- */
-const colors = {
-    // I am good with names!!!
-    // https://coolors.co/palette/2f3e77-f5b841-f4ece3-2cb67d-ff4f5e-4ac6ff-ff6a3d
-    default: ['#2f3e77', '#f5b841', '#f4ece3', '#2cb67d', '#ff4f5e', '#4ac6ff', '#ff6a3d'],
-    // another I like https://coolors.co/palette/f94144-f3722c-f8961e-f9844a-f9c74f-90be6d-43aa8b-4d908e-577590-277da1
-    // But I don't care for the 4th and I think the 8 and 9 are too similar to 7 and 10
-    //  but I don't like how unbalanced it is if I remove all three
-    another_one: ['#f94144', '#f3722c', '#f8961e', '#f9844a', '#f9c74f', '#90be6d', '#43aa8b', '#4d908e', '#577590', '#277da1'],
-    // https://coolors.co/palette/001219-005f73-0a9396-94d2bd-e9d8a6-ee9b00-ca6702-bb3e03-ae2012-9b2226
-    //  the reds on the end are too similar imho
-    another_two: ['#001219', '#005f73', '#0a9396', '#94d2bd', '#e9d8a6', '#ee9b00', '#ca6702', '#bb3e03', '#ae2012', '#9b2226'],
-    // https://coolors.co/palette/8ecae6-219ebc-023047-ffb703-fb8500
-    // ...is this bluey? also too small
-    bluey: ['#8ecae6', '#219ebc', '#023047', '#ffb703', '#fb8500'],
-    // https://coolors.co/palette/ef476f-ffd166-06d6a0-118ab2-073b4c
-    // too small
-    another_three: ["#ef476f", "#ffd166", "#06d6a0", "#118ab2", "#073b4c"],
-    // https://coolors.co/palette/264653-2a9d8f-e9c46a-f4a261-e76f51
-    four: ['#264653', '#2a9d8f', '#e9c46a', '#f4a261', '#e76f51'],
-    // there are no good pride ones idk what to tell you, my man.
-    // I'm too stupid to use the adobe color wheel!!!
-    // I'm paying $5 for coolors for these, if you don't like them I *will* cry
-    //  ok actually most of these look terrible I should not have done this
-    //  I have immediately failed at something and now I never want to do it again
-    // https://coolors.co/palette/d6d2d2-f1e4f3-f4bbd3-f686bd-fe5d9f-364652-071108
-    pink: ['#d6d2d2','#f1e4f3','#f4bbd3', '#f686bd', '#fe5d9f', '#364652', '#071108'],
-    // https://coolors.co/palette/0d0630-18314f-384e77-8bbeb2-e6f9af-f2dfd7-fef9ff
-    five: ['#0d0630', '#18314f', '#384e77', '#8bbeb2', '#e6f9af', '#f2dfd7', '#fef9ff'],
-    // https://coolors.co/palette/61a0af-96c9dc-f06c9b-f9b9b7-f5d491-524948-57467b
-    six: ['#61a0af', '#96c9dc', '#f06c9b', '#f9b9b7', '#f5d491', '#524948', '#57467b'],
-    // https://coolors.co/palette/355070-6d597a-b56576-e56b6f-eaac8b-f5d6c3-fffffa-a9d1dc-53a2be
-    seven: ['#355070', '#6d597a', '#b56576', '#e56b6f', '#eaac8b', '#f5d6c3', '#fffffa', '#a9d1dc', '#53a2be'],
-    // https://coolors.co/palette/70d6ff-ff70a6-ff9770-ffd670-e9ff70-8db38b-8f2d56-19323c-502274
-    eight: ['#70d6ff', '#ff70a6', '#ff9770', '#ffd670', '#e9ff70', '#8db38b', '#8f2d56', '#19323c', '#502274'],
-    // https://coolors.co/palette/033f63-28666e-7c9885-b5b682-fedc97-d1d2f9-a3bcf9-ff5a5f-c1839f
-    nine: ['#033f63', '#28666e', '#7c9885', '#b5b682', '#fedc97', '#d1d2f9', '#a3bcf9', '#ff5a5f', '#c1839f'],
-    // https://coolors.co/palette/227c9d-17c3b2-ffcb77-fef9ef-fe6d73-ffc4eb-ffe4fa-a37774-23231a
-    ten: ['#227c9d', '#17c3b2', '#ffcb77', '#fef9ef', '#fe6d73', '#ffc4eb', '#ffe4fa', '#a37774', '#23231a'],
-    // https://coolors.co/palette/f94144-f3722c-f8961e-f9c74f-90be6d-43aa8b-227c9d-3e6cb6-564b9d-3e3384
-    eleven: ['#f94144', '#f3722c', '#f8961e', '#f9c74f', '#90be6d', '#43aa8b', '#227c9d', '#3e6cb6', '#564b9d', '#3e3384'],
-    // https://coolors.co/palette/d00000-ffba08-3f88c5-032b43-136f63-713e5a
-    twelve: ['#d00000', '#ffba08', '#3f88c5', '#032b43', '#136f63', '#713e5a']
-    // TODO: find more I like :(
-};
-
-// whitelist of the symbol set to narrow it down
-//  also you're gonna want them to not by radially symmetric in any way for certain hell modes
-//  ... or maybe you do
-/**
- * Your symbols. Tiles get a symbol assigned randomly from a set w/o replacement (until necessary) unless fixed.
- * By default, once your chosen set is exhausted, it starts pulling from the default set.
- * This allows you to insert a single easter or whatever you want.
- * You can, of course, bias selection and add duplicates.
- */
-const symbols = {
-    // like and subscribe
-    subscribe: ['youtube', 'hand-thumbs-up', 'sunglasses', 'twitch'],
-    // chicken paul
-    paul: ['egg', 'fire', 'egg-fried'],
-    // "go to the bank and withdraw the funds" - conveniently the size of a 3x3
-    //  I like chat-left-text but I feel headset is more appropriate. No office phone icon, tragically.
-    withdrawfunds: ['headset', 'chat-left-text', 'car-front', 'bank', 'person-vcard', 'credit-card-2-back',
-        'cash-coin', 'currency-exchange', 'currency-bitcoin'],
-    // MyCoin is a very real, award-winning financial establishment I'll have you know
-    //  VERY tempted to add more copies of award to bias selection
-    mycoin: ['currency-exchange', 'cash-coin', 'safe', 'briefcase',
-        'currency-bitcoin', 'currency-euro', 'currency-dollar', 'currency-yen', 'currency-rupee', 'currency-pound',
-        'buildings', 'bank', 'calculator', 'graph-up-arrow', 'award', 'headset'],
-    // Emojos
-    emoji: ['emoji-grin', 'emoji-astonished', 'emoji-grimace', 'emoji-smile-upside-down',
-        'emoji-wink', 'emoji-kiss', 'emoji-neutral', 'emoji-expressionless', 'emoji-tear', 'emoji-dizzy', 'emoji-frown',
-        'emoji-surprise', 'emoji-smile', 'emoji-heart-eyes', 'emoji-laughing', 'emoji-sunglasses', 'emoji-angry'],
-    // Dice
-    dice: ['dice-1', 'dice-2', 'dice-3', 'dice-4', 'dice-5', 'dice-6'],
-    // Numbers
-    numbers: ['0-circle', '1-circle', '2-circle', '3-circle', '4-circle', '5-circle', '6-circle', '7-circle',
-        '8-circle', '9-circle'],
-
-    // Just a bunch of symbols from the list that are FINE
-    default: ['0-circle', '1-circle', '2-circle', '3-circle', '4-circle', '5-circle', '6-circle', '7-circle',
-        '8-circle', '9-circle', 'airplane-engines', 'alarm', 'archive', 'arrow-clockwise', 'arrow-counterclockwise',
-        'arrow-down-circle', 'arrow-down-left-circle', 'arrow-down-right-circle', 'arrow-left-circle',
-        'arrow-left-right', 'arrow-repeat', 'arrow-right-circle', 'arrow-through-heart', 'arrow-up-circle',
-        'arrow-up-left-circle', 'arrow-up-right-circle', 'at', 'award', 'backpack2', 'bag', 'balloon', 'bandaid',
-        'bank', 'bar-chart-line-fill', 'basket', 'beaker', 'bell', 'bicycle', 'book', 'boombox', 'box-seam', 'bricks',
-        'briefcase', 'brush', 'bug', 'building', 'buildings', 'bullseye', 'bus-front', 'cake', 'calculator',
-        'calendar2-week', 'camera-reels', 'camera', 'capsule', 'car-front', 'cart4', 'cassette', 'chat-dots',
-        'chat-right-text', 'chat-square-quote', 'circle-fill', 'circle-half', 'circle', 'cloud-drizzle', 'cloud-fog2',
-        'cloud-hail', 'cloud-haze2', 'cloud-lightning-rain', 'cloud-lightning', 'cloud-moon', 'cloud-rain',
-        'cloud-sleet', 'cloud-snow', 'cloud-sun', 'clouds', 'controller', 'credit-card', 'cup-hot', 'cup-straw',
-        'currency-bitcoin', 'currency-dollar', 'currency-euro', 'currency-exchange', 'currency-pound', 'currency-rupee',
-        'currency-yen', 'diagram-3', 'diamond-fill', 'diamond-half', 'diamond', 'dice-1', 'dice-2', 'dice-3', 'dice-4',
-        'dice-5', 'dice-6', 'display', 'door-closed', 'door-open', 'duffle', 'easel', 'egg-fried', 'egg', 'emoji-angry',
-        'emoji-astonished', 'emoji-dizzy', 'emoji-expressionless', 'emoji-frown', 'emoji-grimace', 'emoji-grin',
-        'emoji-heart-eyes', 'emoji-kiss', 'emoji-laughing', 'emoji-neutral', 'emoji-smile-upside-down', 'emoji-smile',
-        'emoji-sunglasses', 'emoji-surprise', 'emoji-tear', 'emoji-wink', 'envelope-at', 'envelope-paper-heart',
-        'exclamation-triangle', 'eye-fill', 'fingerprint', 'fire', 'flask', 'floppy', 'folder', 'fork-knife', 'gear',
-        'gift', 'graph-down-arrow', 'graph-up-arrow', 'hand-thumbs-down', 'hand-thumbs-up', 'handbag', 'headphones',
-        'headset', 'heart', 'heartbreak', 'hospital', 'hourglass-bottom', 'hourglass-split', 'hourglass-top',
-        'hourglass', 'house', 'image', 'key', 'keyboard', 'lightbulb', 'link-45deg', 'mailbox-flag', 'mailbox',
-        'measuring-cup', 'mic', 'music-note-beamed', 'newspaper', 'paint-bucket', 'paperclip', 'peace', 'pencil',
-        'person-raised-hand', 'person-standing-dress', 'person-standing', 'person-walking', 'piggy-bank', 'printer',
-        'question-diamond', 'recycle', 'rocket', 'shop', 'sign-stop', 'speedometer', 'stoplights', 'stopwatch',
-        'suit-club', 'suit-diamond', 'suit-heart', 'suit-spade', 'trash3', 'tree', 'umbrella', 'volume-down',
-        'volume-mute', 'volume-off', 'volume-up', 'watch', 'wifi-1', 'wifi-2', 'wifi-off', 'wifi']
-};
-
-
-/**
- * Array of puzzles to iterate through for challenge
- * See plan_content for puzzle conf settings.
- * This set will run you though the possibilities without making any individual one too too hard (maybe)
- * Extra features:
- *  @param {number} move_multiplier - Set the move limit to this multiplier of the required moves. Yes you can go lower (rounds down(?))
- *  @param {boolean} spinnnnn - spiiiiiinnnnnnnnnn
- *  @param {string} protect - Enable screen protector 'p' for puzzle, 's' for solution, 'b' for both
- *  @param {string} protect_pattern - Protector theme id, see protectors.svg. Color is baked into the svg, sorry.
- *      SAFARI HATES SVGS! I got it working but it greatly reduced flexibility.
- *      I *really* wanted to let it invert the underlying color. You can't even SET the color outside the svg def now.
- *      Your protector svg can be a watermark or whatever. I don't touch any settings wrt rendering/colors
- *      It will be automagically tiles and jammed in a 450x450 rect under a 100x100 centered viewbox and wriggled around
- *       in a way that won't show the edges.
- */
-const puzzles = [
-    {
-        size: 2, steps: 1,
-        symbol_set: 'paul', exclusive_symbols: true,
-        color_set: 'bluey', move_multiplier: 1, rotation: true
-    },
-    {
-        size: 3, steps: 2,
-        symbol_set: 'withdrawfunds', exclusive_symbols: true,
-        invert_symbol: 'always', rotation: false,
-        protect: 's', protect_pattern: 'wavy'
-    },
-    {
-        size: 4, steps: 3,
-        image_override: 'wwwwtsactp.png',
-        move_multiplier: 3
-    },
-    {
-        size: 1, steps: 1,
-        symbol_set: 'emoji', rotation: false,
-        protect: 'b', protect_pattern: 'spotlight'
-    },
-    {
-        size: 4, steps: 3,
-        symbol_set: 'mycoin', exclusive_symbols: true,
-        invert_symbol: 'B&W', rotation: false,
-        move_multiplier: 1.75
-    },
-    {
-        size: 10, steps: 1, single_symbol: 'emoji-kiss',
-        single_color: '#17c3b2', rotation: false,
-        safety: false, nonce: false, move_multiplier: 18749
-    },
-    {
-        size: 5, steps: 1, shuffles: false,
-        symbol_set: 'subscribe', exclusive_symbols: true,
-        color_set: 'eight', invert_symbol: 'always', rotation: true,
-        move_multiplier: 1, spinnnnn: true
-    }
-];
-
-/**
- * Reaffirm the user that they can do it!
- * This is their punishment for trying to quit the puzzle without using all moves.
- * Biased a little to be a tad less unhinged.
- * Timout is controlled in the CSS via transition callback, check --affirmation-time
- *
- * I should have made the lose state not auto fling the quit slider up to trap them more
- */
-const affirmations = [
-    'You still have moves left!',
-    "Real humans don't give up that easy!",
-    'You can do it!',
-
-    'Do it for Miller!',
-    'Live Laugh Slide',
-    'Have you tried moving it to the left?',
-    'Up, maybe?',
-    '                                                   Not yet!',
-    // :)
-    '     Object [object]     ',
-    document.documentElement.innerHTML.replace(/([\r\n])/g, '')
-]
-// put our thumb on the scale a little bit
-affirmations.push(affirmations[0], affirmations[0], affirmations[0], affirmations[0]);
-
-
-/**
- * Plan puzzle content. Image puzzle will disable all other content settings.
- *
- * Number of steps is not the number of moves to solution; generation MAY undo its own steps or create something reducible.
- * Maximum number of moves to solution is floor(size/2)*shifts
- *
- * Options that can break thinks are make with exclamation points.
- * After accidentally making a puzzle that didn't have enough content, I can say that if
- *  the system fails to make a puzzle the UI will get a little confused but you can skip to the next one
- *  (the progress meter even leaves that pip blank lmao)
- *
- * The tile generator is only smart during its first pass
- *  (read: first min(symbols.length, colors.length, rotation ? 36 : Inf) tiles);
- *  if your total number of possible combinations is close to the number of tiles,
- *  it could get stuck trying to randomly pick combinations that haven't been done yet.
- *
- * You can turn off the safety check and it will spit out whatever it wants.
- *  Identical tiles will secretly be considered different unless you disable the nonce system.
- *
- * !! BAD / FUN TIME POTENTIAL !!
- * - Shuffling even one piece will ruin the expected solution move total.
- *      Shuffling a piece can ruin traditional sliding puzzles, but this is modified to move a row/col so maybe not?
- * - Single color mode without enough symbols will fail.
- *     The same applies to single symbol mode and colors as well as exclusive symbols with a small symbol set.
- *     Enabling rotation will likely prevent these from failing
- * - Disabling the safety will allow for explicitly bad combination (one color, one symbol, no rotation)
- *       but will also interfere with standard generation, so only disable if you want to have fun
- *     Identical tiles will not be interchangeable unless the nonce is off
- * - Always inverting color can look nice at high saturation but may result in poor contrast with some colors.
- *
- * Idea: Reverse-colorblind mode, colors are generated notably close to each other. Maybe a similar rotation mode.
- *
- * @param {number} size - Puzzle size, always square.
- * @param {number} steps - Number of times to slide the initial puzzle rows/columns. Idk what happens <= 0
- * @param {number} shuffles - !! Randomly shuffle tiles n times. basically guaranteed to break the puzzle.
- * @param {null|string} image_override - Use an image instead of symbols. Ignores all other settings.
- * @param {string} symbol_set - Symbol set to choose from first (then fallback to default)
- * @param {boolean} exclusive_symbols - !! Only choose from selected symbol set
- * @param {null|string} single_symbol - !! Only use the symbol name provided.
- * @param {string} color_set - Color scheme to pick from.
- * @param {null|string} single_color - !! Only use provided color code for tiles
- * @param {string} invert_symbol - Set symbol stroke to the background's inverse. One of 'always', 'dark', 'B&W', or 'never'
- *  'always' - Fill is the inverse of the background
- *  'dark' - Fill is the inverse of the background is considered "dark enough"
- *      idk what I was doing here, I don't like it very much. Maybe change to literal filter: invert() ?
- *  'B&W' - Fill is black or white depending on tile darkness
- *  'never' - symbol is presented as-is and fill is not touched.
- * @param {boolean} rotation - Rotate symbols randomly.
- * @param {boolean} safety - Generator safety override.
- * @param {boolean} nonce - Prevents duplicate tiles (prevented by safety) from being interchangeable
- */
-function plan_content({size, steps, shuffles = 0,
-                      image_override= null,
-                      symbol_set= 'emojis', exclusive_symbols = false, single_symbol = null,
-                      color_set = 'default', single_color = null, invert_symbol = 'always',
-                      rotation = true, safety= true, nonce = true} = {}) {
-
-    if (! (size || steps)) {
-        throw new Error('size or steps must be invalid');
-    }
-    const tiles = [];
-    const total_tiles = size * size;
-
-    if (image_override !== null) {
-        // This is (clearly!) off by one but it works in all browsers so IDK!
-        const fr = 100/(size-1);
-        // screw your settings, literally none of them matter
-        for (let i = 0; i < size; i++) {
-            for (let j = 0; j < size; j++) {
-                const tile = document.createElement('div');
-                tile.classList.add('puzzle-tile');
-                tile.style.backgroundSize = `${size}00% ${size}00%`;
-                tile.style.backgroundImage =  `url('${image_override}')`;
-
-                tile.style.backgroundPosition = `${j * fr}% ${i * fr}%`;
-                tile.dataset.index = tiles.length.toString();
-                tile.dataset.code = tile.dataset.index;
-
-                tiles.push(tile);
-            }
-        }
-    } else {
-        if (safety) {
-            // oh baby I don't think I've used a ternary in 8 years
-            const color_total = single_color ? 1 : colors[color_set].length;
-            // Good habits never die
-            //  overlap of requested and default set not considered because it's tedious and you're probably fine.
-            // BUT!! this also means you *must* have a default set that gets us to the required total
-            const symbol_total = single_symbol ? 1 : exclusive_symbols ? symbols[symbol_set].length : symbols.default.length;
-            // I ALREADY TOLD YOU IT'S FINE! ...probably
-            const rotation_total = rotation ? 36 : 1;
-            if (color_total * symbol_total * rotation_total < size * size) {
-                throw new Error("Not enough potential tiles :(");
-            }
-        }
-
-        // RENDER NOTE BEFORE I FORGET:
-        //  style="filter: invert(1);"
-        // but also that doesn't apply to background, only color. so if we set color to background and filter doesn't work
-        //  then everything is invisible, whoops. I may be willing ot take that risk
-        const code_set = new Set();
-
-        let color_pool = [];
-        let symbol_pool = [];
-        const symbols_exhausted = false;
-        const only_color = single_color ? single_color : false;
-        const only_symbol = single_symbol ? single_symbol : false;
-
-        do {
-            // refill color pool
-            if (color_pool.length === 0) {
-                // shallow copy alert
-                // You can't index a map???? why is colors[color_set] undefined
-                color_pool = only_color ? [only_color] : Array.from(colors[color_set]);
-            }
-            // refill symbol pool
-            if (symbol_pool.length === 0) {
-                // Have I mentioned I've missed ternaries?
-                symbol_pool = only_symbol ? [only_symbol] : Array.from(symbols_exhausted ? symbols.default : symbols[symbol_set]);
-            }
-            const selected_color_idx = getRandomInt(color_pool.length);
-            const selected_color = color_pool[selected_color_idx];
-            const selected_symbol_idx = getRandomInt(symbol_pool.length);
-            const selected_symbol = symbol_pool[selected_symbol_idx];
-            const selected_rotation = rotation ? getRandomInt(36) * 10 : 0; // 0 - 350 in increments of 10
-            const tile_code = selected_color + '!' + selected_symbol + '!' + selected_rotation;
-
-            // unique tile or we don't care
-            if (!code_set.has(tile_code) || !safety) {
-                const tile = document.createElement('div');
-                tile.classList.add('puzzle-tile');
-                tile.style.background = selected_color;
-
-                const symbol = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-                if (invert_symbol === 'always' || (invert_symbol === 'dark' && color_is_dark(selected_color))) {
-                    const new_color = invert_style_color(color_to_rgb(selected_color));
-                    symbol.setAttribute('fill', new_color);
-                    // big uh-oh, if something can't do invert they will be invisible lol
-                    // I have been informed that invert is resource heavy so go awy
-                    // symbol.setAttribute('filter', 'invert(1)');
-                } else if (invert_symbol === 'B&W') {
-                    if (color_is_dark(selected_color)) {
-                        symbol.setAttribute('fill', 'white')
-                    } else {
-                        symbol.setAttribute('fill', 'black')
-                    }
-                }
-                if (rotation && selected_rotation) {
-                    symbol.style.transform = `rotate(${selected_rotation}deg)`;
-                    symbol.style.setProperty('--fixed-rotation-angle', `${selected_rotation}deg`);
-                }
-                // nothing to see here OFFICER
-                symbol.style.setProperty('--spin-duration', `${Math.random() * 5}s`);
-                symbol.style.setProperty('--spin-direction', Math.random() > 0.5 ? 'normal' : 'reverse');
-
-                symbol.innerHTML = `<use xlink:href="bootstrap-icons.svg#${selected_symbol}"/>`;
-                tile.appendChild(symbol);
-
-                tile.dataset.index = tiles.length.toString();
-                tile.dataset.code = nonce ? tile_code + '!' + get_nonce(6) : tile_code;
-
-                color_pool.splice(selected_color_idx, 1);
-                symbol_pool.splice(selected_symbol_idx, 1);
-                code_set.add(tile_code);
-                tiles.push(tile);
-            }
-        } while (tiles.length !== total_tiles);
-    }
-
-    // ...why do I return the grid anyway, I don't think it has any use.
-    const [grid, actual_moves, pos_map] = plan_puzz(size, steps, shuffles)
-    return [tiles, pos_map, actual_moves]
-}
 
 const puzzleContainer = document.getElementById('puzzle-container');
 const solutionContainer = document.getElementById('solution-container');
