@@ -55,6 +55,9 @@ function scheduleRender() {
     }
 }
 
+/**
+ * Iterate the render queue and... render
+ */
 function renderQueue() {
     // calling all of them every time I need a frame hurts me. It hurts.
     //  I don't want to be part of the problem!!!
@@ -78,6 +81,7 @@ function renderQueue() {
     if (uiState.render.relight) {uiState.render.relight = false; relightRender();}
     if (uiState.render.puzzle) {uiState.render.puzzle = false; puzzleRender();}
 }
+
 
 function formatTime(ms) {
     if (ms > 356400000) {
@@ -108,6 +112,10 @@ function timerRender() {
     // no I don't know the difference in text objects and no the popup in webstorm saying what it is does not help
     timerSpan.textContent = formatTime(performance.now() - uiState.time);
 }
+
+/**
+ * Start timer interval and reset text
+ */
 function start_timer() {
     // HOO BABY THIS PUPPY RUNS LIKE TRASH
     //  well even when changed from a frame loop to an interval at 100ms it didn't help enough
@@ -126,6 +134,11 @@ function start_timer() {
         }, {once: true});
     }
 }
+
+/**
+ * Stop the timer, optionally reset its time to default. Will do one last render.
+ * @param reset - Reset clock after stopping
+ */
 function stop_timer(reset = false) {
     if (timerFunc !== null) {
         clearInterval(timerFunc);
@@ -142,6 +155,10 @@ function stop_timer(reset = false) {
         }, {once: true});
     }
 }
+
+/**
+ * Reset timer content (and stop it if need be)
+ */
 function reset_timer() {
     if (timerFunc !== null) {stop_timer(true)}
     else {
@@ -156,6 +173,11 @@ function reset_timer() {
     }
 }
 
+/**
+ * Render user move total. Total moves for puzzle controlled by uiState.total_moves. -1 for inf.
+ * I... don't know what happens if it's zero or negative, probably works if it only takes one move to solve.
+ * Resets on global load state, flips to dead on global lose.
+ */
 function movesRender() {
     const move_container = document.getElementById('addon-moves');
     const move_icon = document.getElementById('move-icon');
@@ -191,6 +213,9 @@ function movesRender() {
     }
 }
 
+/**
+ * Render quit button and its various overlay and span controls, has its own state tracking in uiState.quit.
+ */
 function quitRender() {
     // I'm allowing myself to scan time dom every time I call this fun because
     //  I've gated the access to this function
@@ -249,6 +274,9 @@ function quitRender() {
     }
 }
 
+/**
+ * Install quit click event. It toggles quit state and optionally cycles the puzzle or exits the game.
+ */
 function register_quit() {
     const quit_button = document.getElementById('control-7');
 
@@ -298,6 +326,9 @@ function register_quit() {
     });
 }
 
+/**
+ * Renders reset button and slider. Thankfully simpler than quit.
+ */
 function resetRender() {
     const reset_button = document.getElementById('control-3');
     const reset_slider = document.getElementById('reset-confirm');
@@ -316,6 +347,9 @@ function resetRender() {
     }
 }
 
+/**
+ * Registers reset click handler. Only flips between off and waiting for confirmation.
+ */
 function register_reset() {
     const reset_button = document.getElementById('control-3');
 
@@ -353,6 +387,10 @@ function register_reset() {
     });
 }
 
+/**
+ * Render ui flip button action. Swaps holder div locations, flashes container id, and
+ *  (has to) ping protector animator because otherwise the transition gets canceled by the dom shuffle
+ */
 function flipRender() {
     // no, I will not be naming these consistently, thank you.
     const flip_button = document.getElementById('control-9');
@@ -385,6 +423,10 @@ function flipRender() {
     set_protectors(true);
 }
 
+/**
+ * I'm starting to question why I thought I should document every function.
+ * It installs the flip button handler. It does ONE thing.
+ */
 function register_flipper() {
     const flip_button = document.getElementById('control-9');
     flip_button.addEventListener('click', (event) => {
@@ -394,6 +436,19 @@ function register_flipper() {
     });
 }
 
+/**
+ * Render the puzzle. Either you're loading a new one, resetting the current one, or you
+ *  lost and I'm taking your tiles and going home.
+ * uses the delay set in uiState.render.tile_time to delay tile rendering, placing the tiles in solution order.
+ * Technically there's something to be gained there if you pay real close attention.
+ *
+ * If you reset, it pops them off and then does another load but with the original data that was backed up.
+ * Tiles have grid locations in them now so the initial state needs to be recorded.
+ *
+ * Once loading is done there's a callback that unlocks the UI and flings up the more creative settings.
+ *
+ * Losing is just an unload but with no reload.
+ */
 function puzzleRender() {
     if (uiState.global === 'load') {
         // get blasted
@@ -503,6 +558,9 @@ function puzzleRender() {
 }
 
 
+/**
+ * The quit button is actually a trap, this renders your affirmation, locking the UI for ten seconds.
+ */
 function affirmRender() {
     // lock, darken
     clickEater.classList.add('active', 'block', 'reset');
@@ -527,7 +585,7 @@ function affirmRender() {
 
 
 /**
- * Generate new puzzle, setup state to be rendered, request it.
+ * Generate new puzzle, setup state to be rendered, request render.
  * Moves state to load for locked render loop
  */
 function puzzleCycle() {
@@ -584,6 +642,8 @@ function puzzleCycle() {
         puzzle_tiles.push(base_element);
     }
     uiState.current_board = puzzle_tiles;
+    // keep a freshie on hand in case we need to reset.
+    // I don't want to deal with fiddling with real tile dom movements, that was a dumb idea
     uiState.initial_board = puzzle_tiles.map(item => item.cloneNode(true));
 
     // webstorm why will you autocomplete when I type uistate but NOT capitalize it for me
@@ -601,7 +661,7 @@ function puzzleCycle() {
  * Construct puzzle initial state
  * @param {number} size - puzzle size, NxN
  * @param {number} shifts - Number of row/column shifts (min solution moves is (generally) between [shifts] and [floor(size/2)*shifts] )
- * @param {number} shuffle - shuffle pieces. A single swap can easily make it "impossible"
+ * @param {number} shuffle - shuffle pieces. A single swap can easily make it impossible-adjacent
  */
 function plan_puzz(size = 3, shifts= 4, shuffle = 0) {
     // Technically the minimum solution length could be lower as we are SUPER NOT tracking higher order move effects.
@@ -735,8 +795,13 @@ function column_shift(grid, idx, magnitude, up= false) {
     }
 }
 
-// I just can't be bothered to retrofit the grid shifters
+// I just can't be bothered to retrofit the grid shifters to handle an array
 //  haha but I can make it call this instead and make it look intentional
+/**
+ * Shift (and wrap) an array one unit in a direction
+ * @param array - content
+ * @param forward - shift items up one idx, false for back
+ */
 function rotate(array, forward = true) {
     if (forward) {
         array.unshift(array.pop());
@@ -745,7 +810,11 @@ function rotate(array, forward = true) {
     }
 }
 
-
+/**
+ * Unpack color code hex string (must be #RRGGBB)
+ * @param color_code - #RRGGBB string
+ * @returns {number[]} - RGB ints
+ */
 function color_to_rgb(color_code) {
     const color = parseInt(color_code.slice(1), 16);
     // ... that's BGR
@@ -753,12 +822,22 @@ function color_to_rgb(color_code) {
     return [(color & 0xFF0000) >> 16, (color & 0xFF00) >> 8, color & 0xFF]
 }
 
+/**
+ * Vaguely deside if a color is darb by seeing if the average channel value is over 128
+ * @param color_code - array of colors
+ * @returns {boolean}
+ */
 function color_is_dark(color_code) {
     // pls I just want a color type.
     const [r, g, b] = color_to_rgb(color_code);
     return (r + g + b) / 3 < 128
 }
 
+/**
+ * Invert color array
+ * @param color - color array from colo_to_rgb or whatever I guess
+ * @returns {string} rgb(RR, GG, BB) string
+ */
 function invert_style_color(color) {
     if (!color || color.length !== 3) {
         console.warn("Invalid RGB color string:", color);
@@ -768,7 +847,12 @@ function invert_style_color(color) {
     return `rgb(${255 - color[0]}, ${255 - color[1]}, ${255 - color[2]})`;
 }
 
-function get_nonce(len) {
+/**
+ * Make some letters
+ * @param len - Make this many of them
+ * @returns {string}
+ */
+function get_nonce(len = 6) {
     const charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     let nonce = '';
     for (let i = 0; i < len; i++) {
@@ -780,6 +864,13 @@ function get_nonce(len) {
 
 
 // all my homies hate maps
+/**
+ * COLORS!
+ * Tile colors are selected randomly from a set (unless you assign the color) w/o replacement (until necessary)
+ *
+ * Found some online. I... was not good at making them.
+ * Remember you have size^2 tiles, that adds up fast.
+ */
 const colors = {
     // I am good with names!!!
     // https://coolors.co/palette/2f3e77-f5b841-f4ece3-2cb67d-ff4f5e-4ac6ff-ff6a3d
@@ -828,6 +919,12 @@ const colors = {
 // whitelist of the symbol set to narrow it down
 //  also you're gonna want them to not by radially symmetric in any way for certain hell modes
 //  ... or maybe you do
+/**
+ * Your symbols. Tiles get a symbol assigned randomly from a set w/o replacement (until necessary) unless fixed.
+ * By default, once your chosen set is exhausted, it starts pulling from the default set.
+ * This allows you to insert a single easter or whatever you want.
+ * You can, of course, bias selection and add duplicates.
+ */
 const symbols = {
     // like and subscribe
     subscribe: ['youtube', 'hand-thumbs-up', 'sunglasses', 'twitch'],
@@ -884,12 +981,18 @@ const symbols = {
 
 /**
  * Array of puzzles to iterate through for challenge
- * See plan_content for primary members
+ * See plan_content for puzzle conf settings.
+ * This set will run you though the possibilities without making any individual one too too hard (maybe)
  * Extra features:
  *  @param {number} move_multiplier - Set the move limit to this multiplier of the required moves. Yes you can go lower (rounds down(?))
  *  @param {boolean} spinnnnn - spiiiiiinnnnnnnnnn
  *  @param {string} protect - Enable screen protector 'p' for puzzle, 's' for solution, 'b' for both
  *  @param {string} protect_pattern - Protector theme id, see protectors.svg. Color is baked into the svg, sorry.
+ *      SAFARI HATES SVGS! I got it working but it greatly reduced flexibility.
+ *      I *really* wanted to let it invert the underlying color. You can't even SET the color outside the svg def now.
+ *      Your protector svg can be a watermark or whatever. I don't touch any settings wrt rendering/colors
+ *      It will be automagically tiles and jammed in a 450x450 rect under a 100x100 centered viewbox and wriggled around
+ *       in a way that won't show the edges.
  */
 const puzzles = [
     {
@@ -932,18 +1035,26 @@ const puzzles = [
     }
 ];
 
+/**
+ * Reaffirm the user that they can do it!
+ * This is their punishment for trying to quit the puzzle without using all moves.
+ * Biased a little to be a tad less unhinged.
+ * Timout is controlled in the CSS via transition callback, check --affirmation-time
+ *
+ * I should have made the lose state not auto fling the quit slider up to trap them more
+ */
 const affirmations = [
     'You still have moves left!',
     "Real humans don't give up that easy!",
     'You can do it!',
 
     'Do it for Miller!',
-    'Believe in the us that believes in you!',
     'Live Laugh Slide',
-    'Object [object]',
     'Have you tried moving it to the left?',
     'Up, maybe?',
     '                                                   Not yet!',
+    // :)
+    '     Object [object]     ',
     document.documentElement.innerHTML.replace(/([\r\n])/g, '')
 ]
 // put our thumb on the scale a little bit
@@ -956,7 +1067,20 @@ affirmations.push(affirmations[0], affirmations[0], affirmations[0], affirmation
  * Number of steps is not the number of moves to solution; generation MAY undo its own steps or create something reducible.
  * Maximum number of moves to solution is floor(size/2)*shifts
  *
- * !! BAD TIME POTENTIAL !!
+ * Options that can break thinks are make with exclamation points.
+ * After accidentally making a puzzle that didn't have enough content, I can say that if
+ *  the system fails to make a puzzle the UI will get a little confused but you can skip to the next one
+ *  (the progress meter even leaves that pip blank lmao)
+ *
+ * The tile generator is only smart during its first pass
+ *  (read: first min(symbols.length, colors.length, rotation ? 36 : Inf) tiles);
+ *  if your total number of possible combinations is close to the number of tiles,
+ *  it could get stuck trying to randomly pick combinations that haven't been done yet.
+ *
+ * You can turn off the safety check and it will spit out whatever it wants.
+ *  Identical tiles will secretly be considered different unless you disable the nonce system.
+ *
+ * !! BAD / FUN TIME POTENTIAL !!
  * - Shuffling even one piece will ruin the expected solution move total.
  *      Shuffling a piece can ruin traditional sliding puzzles, but this is modified to move a row/col so maybe not?
  * - Single color mode without enough symbols will fail.
@@ -965,12 +1089,12 @@ affirmations.push(affirmations[0], affirmations[0], affirmations[0], affirmation
  * - Disabling the safety will allow for explicitly bad combination (one color, one symbol, no rotation)
  *       but will also interfere with standard generation, so only disable if you want to have fun
  *     Identical tiles will not be interchangeable unless the nonce is off
- * - Always inverting color can look nice at high saturations but may result in poor contrast with some colors.
+ * - Always inverting color can look nice at high saturation but may result in poor contrast with some colors.
  *
  * Idea: Reverse-colorblind mode, colors are generated notably close to each other. Maybe a similar rotation mode.
  *
  * @param {number} size - Puzzle size, always square.
- * @param {number} steps - Number of times to slide the initial puzzle rows/columns.
+ * @param {number} steps - Number of times to slide the initial puzzle rows/columns. Idk what happens <= 0
  * @param {number} shuffles - !! Randomly shuffle tiles n times. basically guaranteed to break the puzzle.
  * @param {null|string} image_override - Use an image instead of symbols. Ignores all other settings.
  * @param {string} symbol_set - Symbol set to choose from first (then fallback to default)
@@ -982,7 +1106,7 @@ affirmations.push(affirmations[0], affirmations[0], affirmations[0], affirmation
  *  'always' - Fill is the inverse of the background
  *  'dark' - Fill is the inverse of the background is considered "dark enough"
  *      idk what I was doing here, I don't like it very much. Maybe change to literal filter: invert() ?
- *  'B&W' - Fill is black or white depending on tile color
+ *  'B&W' - Fill is black or white depending on tile darkness
  *  'never' - symbol is presented as-is and fill is not touched.
  * @param {boolean} rotation - Rotate symbols randomly.
  * @param {boolean} safety - Generator safety override.
@@ -1206,6 +1330,9 @@ function button_flash(elem) {
     elem.style.animation = 'var(--button-flash-animation-params)';
 }
 
+/**
+ * Flick the info panels off/on. No one is using these so just load them dynamically.
+ */
 function infoRender() {
     const info_items = document.getElementsByClassName('info-panel');
     const id_items = document.getElementsByClassName('container-id');
@@ -1231,6 +1358,9 @@ function infoRender() {
     uiState.info = !uiState.info;
 }
 
+/**
+ * Info button setup, nothing exciting.
+ */
 function register_info() {
     const info_button = document.getElementById('control-1');
     info_button.addEventListener('click', (event) => {
@@ -1254,8 +1384,9 @@ function register_info() {
 
 // lots of nice options - tringle, dot, octagon, diamond, etc
 const progress_shape = 'triangle';
+
 /**
- * Render progress graphic - does not request frame
+ * Renders user progress. First call populates, remaining calls check current global state and current idx
  */
 function progressRender() {
     const progressContainer = document.getElementById('addon-progress');
@@ -1328,7 +1459,10 @@ function inject_debug() {
     //  that's effort, get owned, death stranding 2 is out
 }
 
-
+/**
+ * A tile (um actually it's on the container now) was clicked, run a tile relight.
+ * @param event
+ */
 function tile_clicked(event) {
     // on click, highlight the row/col, lowlight the others.
     //  when clicking the already selected tile, clear everything.
@@ -1349,6 +1483,11 @@ function tile_clicked(event) {
     scheduleRender();
 }
 
+/**
+ * Either:
+ *  1. Light up the active cross, lowlight the others, add active border
+ *  2. Reset all decor
+ */
 function relightRender() {
 
     /*
@@ -1388,6 +1527,10 @@ function relightRender() {
 }
 
 
+/**
+ * Render a tile slide. It's annoying because of active/copied tiles.
+ * Calls checkMove after animation is complete to check... the move. Win/lose/etc
+ */
 function slideRender() {
     const slide_overlay = document.getElementById('slide-overlay')
     // suck up current state
@@ -1505,6 +1648,9 @@ function slideRender() {
     }
 }
 
+/**
+ * Check win state and move count. either kick off a win/loss or do nothing
+ */
 function checkMove() {
     //  1: Check you won.
     //  2. Check you two (lost).
@@ -1563,6 +1709,9 @@ function checkMove() {
     }
 }
 
+/**
+ * Directional arrow handler, thankfully simple now. They also kick off a humanity slide.
+ */
 function register_arrows() {
     const up = document.getElementById('control-2');
     const down = document.getElementById('control-8');
@@ -1601,7 +1750,11 @@ function register_arrows() {
 }
 
 
-
+/**
+ * I hate safari and I don't want to dump my SVGs in the document.
+ * Inject protector svg into the DOM
+ * @returns {Promise<void>}
+ */
 async function protectorInjector() {
     // TURNS OUT SAFARI IS BAD AT SVGS
     //  it can't fetch files with a fill url. Chrome can, of course.
@@ -1626,7 +1779,10 @@ async function protectorInjector() {
     }
 }
 
-
+/**
+ * Reset protector graphics because if you don't between rounds
+ *  the next will start screwed up if the next is spotlight
+ */
 function clear_protectors() {
     // idk why I made this a function
     if (uiState.render.protector !== null) {
@@ -1641,6 +1797,10 @@ function clear_protectors() {
     }
 }
 
+/**
+ * Kick on protector divs, schedule render callbacks.
+ * @param reset - We just screwed up the DOM and need to kickstart an animation now.
+ */
 function set_protectors(reset=false) {
     // This is a pain because safari HATES FUN
     // also hoooo buddy this gets a little framey with both on. SAFARI THIS IS ALL YOUR FAULT.

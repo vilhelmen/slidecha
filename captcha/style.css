@@ -31,6 +31,7 @@ body {
     --spin-duration: 2s;
     --spin-direction: normal;
     --fixed-rotation-angle: 0deg;
+    --affirmation-time: 10s;
 
     --button-flash-animation-params: flashBrightness 0.1s linear forwards;
     --id-flash-animation-params: idFlash 0.8s linear forwards;
@@ -961,7 +962,7 @@ In theory you could use the center control or remove the ui flip button
     display: inline-block;
 }
 #affirmation.active span {
-    animation: affirm 1 10s linear running forwards;
+    animation: affirm 1 var(--affirmation-time) linear running forwards;
 }
 
 @keyframes affirm {
