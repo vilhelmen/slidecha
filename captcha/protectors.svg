@@ -25,7 +25,7 @@
       <circle cx="35" cy="5" r="3" fill="currentColor" opacity="0.30" transform="rotate(-10 35 5)"/>
       <circle cx="5" cy="30" r="2" fill="currentColor" opacity="0.29"/>
     </pattern>
-    <pattern id="cheese" patternUnits="userSpaceOnUse" patternContentUnits="userSpaceOnUse" x="0" y="0" width="50" height="50" viewBox="0 0 50 50">
+    <pattern id="cheese" patternUnits="userSpaceOnUse" patternContentUnits="userSpaceOnUse" x="0" y="0" width="40" height="40" viewBox="0 0 40 40">
       <path d="
       M 0 0 H 40 V 40 H 0 Z
       M 10 10 m -6 0 a 6 6 0 1 0 12 0 a 6 6 0 1 0 -12 0 Z
