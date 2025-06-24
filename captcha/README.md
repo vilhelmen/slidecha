@@ -40,7 +40,7 @@ Detailed configuration documentation is in the code and follows:
 * Puzzle definitions are set in `puzzles`. See the function `plan_content` docs for normal generation settings. See the variable docs for the fun settings.
 * The amount of time it takes to scroll tiles is in the CSS (`--slide-timing`).
 * The affirmation lockout and text scroll is also in the CSS (`--affirmation-time`).
-
+* Reskinning colors likely annoying, but you're looking for `lightgray` in the CSS, with a bit of `darkgray`.
 The default puzzle set is designed to run you through examples of what is possible without any being too difficult.
 
 
