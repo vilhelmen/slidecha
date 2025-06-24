@@ -86,7 +86,7 @@ These are directly set in the `puzzles` object and picked up by various function
 * @param {boolean} `spinnnnn` - Take it for a spin and find out
 * @param {string} `protect` - Enable the screen protector. 'p' for puzzle, 's' for solution, 'b' for both.
 * @param {string} `protect_pattern` - Protector theme id, see `protectors.svg`. Defaults to `wavy` if enabled.
-  * Content and color is strictly controlled by the SVG def, unfortunately. Safari made this almost impossible.
+  * Content and color is strictly controlled by the SVG def, unfortunately. Safari made this almost impossible. Great place for a brand identifier, see code for sizing info.
 
 
 ## Cut content:
