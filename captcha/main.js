@@ -211,7 +211,7 @@ const puzzles = [
         tile_time: 30
     },
     {
-        size: 10, steps: 1, single_symbol: 'emoji-kiss',
+        size: 10, steps: 10, single_symbol: 'emoji-kiss',
         single_color: '#17c3b2', rotation: false,
         safety: false, nonce: false, move_multiplier: 18749
     },
