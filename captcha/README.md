@@ -22,8 +22,7 @@ There are four extra control buttons:
 
 The addon section contains 5 components:
 1. Puzzle progress - This shows the user how many puzzles they have completed.
-2. Humanity - A semi-random random slider that rates the system's confidence that the user is not a robot.
-A light blinks when it gets to either extreme.
+2. Humanity - A semi-random random slider that rates the system's confidence that the user is not a robot. A light blinks when it gets to either extreme.
    1. It follows a cycle of randomly timed adjustments eventually ending in a larger swing towards the other side.
    Interacting with the arrow controls advances the cycle.
    Losing a puzzle reduces their score by 80% of its current value; a win increases it by 20%.
@@ -34,7 +33,7 @@ A light blinks when it gets to either extreme.
 
 Detailed configuration documentation is in the code and follows:
 * Tile icons are in the `symbols` variable, these are divided into sets a puzzle can select from.
-  * Symbols must be in the bootstrap icon library. See `main.js:46`, `plan_content` for the `use` template in order to change this.
+  * Symbols must be in the (included) bootstrap icon library. See `main.js:46`, `plan_content` for the `use` template in order to change this.
 * Tile colors are in the `colors` variable, also divided into sets.
 * The user affirmations, `affirmations` is a list of strings.
 * Puzzle definitions are set in `puzzles`. See the function `plan_content` docs for normal generation settings. See the variable docs for the fun settings.
