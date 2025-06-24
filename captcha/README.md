@@ -38,7 +38,8 @@ Detailed configuration documentation is in the code and follows:
 * Tile colors are in the `colors` variable, also divided into sets.
 * The user affirmations, `affirmations` is a list of strings.
 * Puzzle definitions are set in `puzzles`. See the function `plan_content` docs for normal generation settings. See the variable docs for the fun settings.
-* The affirmation lockout and text scroll is controlled in the CSS (`--affirmation-time`) for whatever reason.
+* The amount of time it takes to scroll tiles is in the CSS (`--slide-timing`).
+* The affirmation lockout and text scroll is also in the CSS (`--affirmation-time`).
 
 The default puzzle set is designed to run you through examples of what is possible without any being too difficult.
 

@@ -1540,6 +1540,8 @@ function relightRender() {
 /**
  * Render a tile slide. It's annoying because of active/copied tiles.
  * Calls checkMove after animation is complete to check... the move. Win/lose/etc
+ * The amount of time to complete a slide is in the CSS, --slide-timing
+ * may look funny if not synced with highlight time.
  */
 function slideRender() {
     const slide_overlay = document.getElementById('slide-overlay')
@@ -1862,7 +1864,6 @@ function set_protectors(reset=false) {
 
             // 10-14s
             const nextJostle = Math.trunc(minDelay + (Math.random() * 4000));
-            console.log(nextJostle);
 
             requestAnimationFrame(() => {
                 protectors.forEach(protector => {
