@@ -44,7 +44,16 @@ The default puzzle set is designed to run you through examples of what is possib
 
 
 ### General puzzle creation
-The following are the parameters in `puzles` that are fed to `plan_content`:
+
+Puzzles should at the very least define their size and the number of movement steps.
+From there they can be further decorated by choosing a custom color set, set of symbols, or an image.
+
+Additional settings let you further lock in your configuration.
+Symbol color inversion is a nice touch, though some colors can look questionable.
+Setting it to `B&W` is a great default unless you're experimenting with colored images.
+By default, symbols will be randomly rotated, which also gives them a good "captcha" feeling.
+
+The following are the parameters in `puzzles` that are fed to `plan_content`:
 * @param {number} `size` - Puzzle size, always square.
 * @param {number} `steps` - Number of times to slide the initial puzzle rows/columns. Idk what happens <= 0
 * @param {number} `shuffles` - !! Randomly shuffle tiles n times. Basically guaranteed to break the puzzle.
@@ -78,8 +87,14 @@ You can turn off the safety check and it will spit out whatever it wants.
 Identical tiles will secretly be considered different unless you disable the nonce system.
 
 ### Extra puzzle settings:
-These are directly set in the `puzzles` object and picked up by various functions as needed:
 
+The move multiplier is vital to give your puzzle a constrained feel.
+A funny side effect to consider is that it's impossible to lose when you have unlimited moves, meaning the user can never swap out the puzzle they are given.
+Take that as you will.
+
+The protector is a great addition that applies an overlay over one or both tile grids reminiscent of traditional text captchas.
+
+These are directly set in the `puzzles` object and picked up by various functions as needed:
 * @param {number} `move_multiplier` - Set the move limit to this multiplier of the required moves.
   * Yes you can go lower. Win/loss is only checked after making a move so you always get one.
 * @param {number} `tile_time` - Time between tile loads, in milliseconds
