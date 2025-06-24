@@ -98,10 +98,11 @@ These are directly set in the `puzzles` object and picked up by various function
 * @param {number} `move_multiplier` - Set the move limit to this multiplier of the required moves.
   * Yes you can go lower. Win/loss is only checked after making a move so you always get one.
 * @param {number} `tile_time` - Time between tile loads, in milliseconds
-* @param {boolean} `spinnnnn` - Take it for a spin and find out
+* @param {boolean} `spinnnnn` - Take it for a spin and find out. Probably not practical, but it *was* easy!
 * @param {string} `protect` - Enable the screen protector. 'p' for puzzle, 's' for solution, 'b' for both.
 * @param {string} `protect_pattern` - Protector theme id, see `protectors.svg`. Defaults to `wavy` if enabled.
   * Content and color is strictly controlled by the SVG def, unfortunately. Safari made this almost impossible. Great place for a brand identifier, see code for sizing info.
+  * Motion can't be disabled but it can easily be broken off by removing the bottom half of `set_protectors` or just commenting out the jostle callback.
 
 
 ## Cut content:
